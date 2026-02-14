@@ -1,0 +1,817 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id         Int        @id @default(autoincrement())
+  uid        Int        @default(autoincrement())
+  first_name String
+  last_name  String?
+  email      String     @unique
+  phone      String
+  password   String
+  gender     String
+  dob        String?
+  sponsor_id Int?
+  role       String     @default("user")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  sponsor    Customer?  @relation("SponsorRelation", fields: [sponsor_id], references: [id])
+  Customer   Customer[] @relation("SponsorRelation")
+
+  orders         Order[]
+  addresses      Address[]
+  customerPoints CustomerPoint[]
+
+  AffiliateComission AffiliateComission[]
+  Withdraw           WithdrawRequest[]
+  Payable            PayableDisburse[]
+  CustomerDocument   CustomerDocument[]
+  CustomerWishList   CustomerWishList[]
+  fraudCustomer      fraudCustomer[]
+  abandonCart        abandonCart[]
+  ProductRating      ProductRating[]
+
+  BankDetail BankDetail[]
+
+  supportTicket supportTicket[]
+}
+
+/**
+ * PRODUCT Start
+ */
+
+model Product {
+  id               Int     @id @default(autoincrement())
+  name             String
+  slug             String  @unique
+  description      String?
+  shortDescription String?
+  metaKeywords     String?
+  seoMeta          Json?
+  specification    String?
+  buyPrice         Float?
+  sellPrice        Float
+  discount         Float?  @default(0) // Percentage
+  discountPrice    Float?  @default(0)
+  point            Float?  @default(0) // Percentage
+  isFeatured       Boolean @default(false)
+  model            String?
+  visibility       String  @default("published")
+
+  brandId Int?
+  brand   ProductBrand? @relation(fields: [brandId], references: [id])
+
+  categories       ProductCategory[]  @relation("ProductCategories")
+  images           ProductImage[]
+  orderItems       OrderItem[]
+  labels           ProductLabel[]     @relation("ProductLabel")
+  ratings          ProductRating[]
+  productVariants  ProductVariant[]
+  tags             ProductTag[]
+  wishLists        CustomerWishList[]
+  locations        Location[]
+  productLocations ProductLocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ✅ Correctly defined relation name
+  ProductCategoryPivot ProductCategoryPivot[] @relation("ProductCategoryPivotRelation")
+  inventories          Inventory[]
+}
+
+model ProductBrand {
+  id           Int     @id @default(autoincrement())
+  name         String
+  metaKeywords String?
+  seoMeta      Json?
+  slug         String  @unique
+  logo         String?
+  description  String?
+
+  products Product[]
+}
+
+model ProductLabel {
+  id         Int      @id @default(autoincrement())
+  product    Product  @relation("ProductLabel", fields: [productId], references: [id])
+  productId  Int
+  label      Label    @relation("ProductLabel", fields: [labelId], references: [id])
+  labelId    Int
+  assignedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([productId, labelId])
+}
+
+model Label {
+  id        Int            @id @default(autoincrement())
+  name      String         @unique
+  slug      String
+  products  ProductLabel[] @relation("ProductLabel")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model ProductImage {
+  id        Int       @id @default(autoincrement())
+  name      String
+  altText   String?
+  type      ImageType
+  extension String
+  isDefault Boolean   @default(false)
+  product   Product?  @relation(fields: [productId], references: [id])
+  productId Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([productId])
+}
+
+model ProductCategory {
+  id           Int               @id @default(autoincrement())
+  name         String
+  slug         String            @unique
+  image        String?
+  icon         String?
+  color        String?
+  metaKeywords String?
+  seoMeta      Json?
+  parentId     Int?
+  parent       ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  childrens    ProductCategory[] @relation("CategoryHierarchy")
+  products     Product[]         @relation("ProductCategories")
+  hasLocation  Boolean?
+  isFeatured   Boolean? @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  // ✅ Optional reverse relation for pivot
+  ProductCategoryPivot ProductCategoryPivot[]
+}
+
+model ProductCategoryPivot {
+  id         Int @id @default(autoincrement())
+  productId  Int
+  categoryId Int
+
+  // ✅ Each pivot links to ONE product
+  product  Product         @relation("ProductCategoryPivotRelation", fields: [productId], references: [id])
+  category ProductCategory @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attribute {
+  id              Int              @id @default(autoincrement())
+  name            String
+  attributeValues AttributeValue[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model AttributeValue {
+  id          Int       @id @default(autoincrement())
+  value       String
+  codeNumber  String?
+  attribute   Attribute @relation(fields: [attributeId], references: [id])
+  attributeId Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  variantAttributes VariantAttribute[]
+}
+
+model ProductVariant {
+  id                Int                @id @default(autoincrement())
+  sku               String?
+  model             String?
+  quantity          Int                @default(0)
+  buyPrice          Float
+  sellPrice         Float
+  product           Product            @relation(fields: [productId], references: [id])
+  productId         Int
+  variantAttributes VariantAttribute[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  CombinedVariantAttribute CombinedVariantAttribute[]
+  inventories              Inventory[]
+}
+
+model VariantAttribute {
+  id               Int            @id @default(autoincrement())
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  productVariantId Int
+  attributeValue   AttributeValue @relation(fields: [attributeValueId], references: [id])
+  attributeValueId Int
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  OrderItem        OrderItem[]
+
+  @@unique([productVariantId, attributeValueId])
+}
+
+model CombinedVariantAttribute {
+  id                Int            @id @default(autoincrement())
+  productVariantId  Int
+  productVariant    ProductVariant @relation(fields: [productVariantId], references: [id])
+  attributeValueIds Json?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model ProductTag {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  tagName   String
+  slug      String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductRating {
+  id         Int      @id @default(autoincrement())
+  rating     Int
+  review     String?
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([customerId, productId])
+}
+
+/**
+ * PRODUCT End
+ */
+
+model Order {
+  id                Int             @id @default(autoincrement())
+  customer          Customer        @relation(fields: [customerId], references: [id])
+  customerId        Int
+  orderItems        OrderItem[]
+  status            OrderStatus     @default(PENDING)
+  totalAmount       Float
+  totalPoint        Float?
+  shippingAddress   Address         @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  shippingAddressId Int
+  billingAddress    Address         @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  billingAddressId  Int
+  payment           Payment?
+  discount          Float?
+  CustomerPoint     CustomerPoint[]
+
+  AffiliateComission AffiliateComission[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  fraudChecked       FraudChecked?        @relation(fields: [fraudCheckedId], references: [id])
+  fraudCheckedId     Int?
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+model OrderItem {
+  id                 Int               @id @default(autoincrement())
+  order              Order             @relation(fields: [orderId], references: [id])
+  orderId            Int
+  product            Product           @relation(fields: [productId], references: [id])
+  productId          Int
+  quantity           Int
+  price              Float
+  point              Float             @default(0)
+  variantAttribute   VariantAttribute? @relation(fields: [variantAttributeId], references: [id])
+  variantAttributeId Int?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+model Address {
+  id         Int       @id @default(autoincrement())
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId Int?
+  first_name String?
+  last_name  String?
+  house      String?
+  street     String?
+  area       String?
+  city       String?
+  state      String?
+  zipCode    String?
+  country    String?
+  phone      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  shippingOrders Order[] @relation("ShippingAddress")
+  billingOrders  Order[] @relation("BillingAddress")
+}
+
+model BankDetail {
+  id                Int       @id @default(autoincrement())
+  customer          Customer? @relation(fields: [customerId], references: [id])
+  customerId        Int
+  bankName          String?
+  branch            String?
+  accountNumber     String?
+  swiftCode         String?
+  accountHolderName String?
+  accountType       String?
+  nid               String?
+  tin               String?
+  passport          String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  order         Order         @relation(fields: [orderId], references: [id])
+  orderId       Int           @unique
+  method        String
+  status        PaymentStatus
+  paidAt        DateTime?
+  transactionId String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  BlogPost BlogPost[]
+
+  activityLog activityLog[]
+
+  ticketReponse ticketReponse[]
+}
+
+model CustomerPoint {
+  id         Int      @id @default(autoincrement())
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId Int
+  amount     Float
+  dateAt     String
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model AffiliateComission {
+  id          Int      @id @default(autoincrement())
+  customerId  Int
+  customer    Customer @relation(fields: [customerId], references: [id])
+  orderId     Int
+  order       Order    @relation(fields: [orderId], references: [id])
+  amount      Float
+  percentage  Float
+  orderAmount Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PayableDisburse {
+  id            Int      @id @default(autoincrement())
+  customerId    Int
+  customer      Customer @relation(fields: [customerId], references: [id])
+  amount        Float
+  balanceAmount Float    @default(0)
+  source        String?
+  type          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model WithdrawRequest {
+  id             Int      @id @default(autoincrement())
+  customerId     Int
+  customer       Customer @relation(fields: [customerId], references: [id])
+  amount         Float
+  withdrawDetail String?
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Reward {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  amount     Float
+  reason     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model CustomerDocument {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  title      String?
+  FileName   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model CustomerWishList {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Location {
+  id           Int        @id @default(autoincrement())
+  name         String
+  slug         String     @unique
+  metaKeywords String?
+  seoMeta      Json?
+  parentId     Int?
+  level        String?
+  parent       Location?  @relation("LocationChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Location[] @relation("LocationChildren")
+
+  products Product[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  ProductLocation ProductLocation[]
+  inventories     Inventory[]
+
+  // Enforce unique name within the same parent (e.g., subcity names unique within their city)
+  @@unique([parentId, name])
+  // Helpful indexes
+  @@index([parentId])
+}
+
+model ProductLocation {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  locationId  Int
+  locationIds Json? // This will hold multiple location IDs as a JSON array
+  extraInfo   String? // Optional field for additional data
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location    Location @relation(fields: [locationId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Banner {
+  id              Int      @id @default(autoincrement())
+  name            String
+  slug            String
+  image           String
+  height          Int?
+  width           Int?
+  position        String?
+  url             String?
+  url_text        String?
+  title_text      String?
+  sub_text        String?
+  backgroundColor String?
+  is_button       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model vendor {
+  id        Int      @id @default(autoincrement())
+  name      String?
+  email     String?
+  phone     String?
+  logo      String?
+  extData   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BlogCategory {
+  id           Int            @id @default(autoincrement())
+  name         String
+  slug         String
+  image        String?
+  description  String?
+  metaKeywords String?
+  seoMeta      Json?
+  parentId     Int?
+  parent       BlogCategory?  @relation("BlogCategoryHierarchy", fields: [parentId], references: [id])
+  childrens    BlogCategory[] @relation("BlogCategoryHierarchy")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  BlogPost BlogPost[] // Mean this category ID can have many time in BlogPost as categoryId
+}
+
+model BlogPost {
+  id            Int          @id @default(autoincrement())
+  title         String
+  slug          String
+  type          String // Page or Post
+  excerpt       String
+  content       String
+  featuredImage String?
+  metaKeywords  String?
+  seoMeta       Json?
+  userId        Int
+  categoryId    Int
+  category      BlogCategory @relation(fields: [categoryId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model webSetting {
+  id           Int      @id @default(autoincrement())
+  name         String
+  slogan       String
+  email        String?
+  address      String?
+  logo         String?
+  phone        String?
+  language     String?
+  currency     String?
+  currencyCode String?
+  socialLinks  Json?
+  extData      Json?
+  opneHours    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model smtpSetting {
+  id         Int      @id @default(autoincrement())
+  name       String
+  port       String
+  host       String
+  tlsSSL     String
+  username   String?
+  password   String?
+  baseUrl    String?
+  apiKey     String?
+  privateKey String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model smsGatewaySetting {
+  id         Int      @id @default(autoincrement())
+  name       String
+  to         String
+  from       String
+  username   String?
+  password   String?
+  baseUrl    String?
+  apiKey     String?
+  privateKey String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model apiSetting {
+  id                 Int      @id @default(autoincrement())
+  name               String
+  serviceType        String?
+  webhookBearerToken String
+  username           String?
+  password           String?
+  baseUrl            String?
+  apiKey             String?
+  privateKey         String?
+  extData            String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model fraudCustomer {
+  id          Int      @id @default(autoincrement())
+  customerId  Int
+  customer    Customer @relation(fields: [customerId], references: [id])
+  phoneNumber String
+  extData     Json?
+}
+
+model abandonCart {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  cartItems  Json?
+  extData    Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model activityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  extData   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model shippingCostSetting {
+  id           Int      @id @default(autoincrement())
+  location     String?
+  price        String?
+  isByLocation Boolean  @default(false)
+  isFree       Boolean  @default(false)
+  extData      Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model mediaStorage {
+  id        Int      @id @default(autoincrement())
+  name      String?
+  type      String?
+  extension String?
+  altText   String?
+  path      String?
+  extData   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model supportTicket {
+  id         Int          @id @default(autoincrement())
+  userId     Int
+  user       Customer     @relation(fields: [userId], references: [id])
+  subject    String
+  message    String
+  priority   String?
+  attachment String?
+  status     TicketStatus @default(pending) // Use enum here
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  ticketReponse ticketReponse[]
+}
+
+model ticketReponse {
+  id        Int           @id @default(autoincrement())
+  ticketId  Int
+  tickets   supportTicket @relation(fields: [ticketId], references: [id])
+  userId    Int
+  user      User[]
+  message   String
+  status    String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model siteSetting {
+  id               Int     @id @default(autoincrement())
+  site_name        String
+  description      String
+  logo             String
+  address          String
+  phone            String
+  email            String
+  whatsapp         String
+  default_currency Int
+  is_maintenance   Boolean @default(false)
+}
+
+model socialSetting {
+  id          Int    @id @default(autoincrement())
+  social_name String
+  social_url  String
+  social_icon String
+}
+
+model currency {
+  id            Int     @id @default(autoincrement())
+  currency_name String
+  currency_sign String
+  currency_rate Float
+  is_default    Boolean @default(false)
+}
+
+model Inventory {
+  id Int @id @default(autoincrement())
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  // NULL = product without variant
+  productVariantId Int?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+
+  // NULL = global stock (no location)
+  locationId Int?
+  location   Location? @relation(fields: [locationId], references: [id])
+
+  stock         Int @default(0)
+  reservedStock Int @default(0)
+
+  inventoryMovements InventoryMovement[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
+  warehouseId Int?
+
+  @@unique([productId, productVariantId, locationId])
+  @@index([productId])
+  @@index([productVariantId])
+  @@index([locationId])
+}
+
+model InventoryMovement {
+  id          Int       @id @default(autoincrement())
+  inventoryId Int
+  inventory   Inventory @relation(fields: [inventoryId], references: [id])
+
+  type      InventoryMovementType
+  quantity  Int
+  reference String?
+  note      String?
+  createdBy Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([inventoryId])
+}
+
+model Warehouse {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventories Inventory[]
+}
+
+model FraudChecked {
+  id             Int     @id @default(autoincrement())
+  number         String  @unique
+  orderId        Int?
+  order          Order[]
+  totalParcel    Int     @default(0)
+  totalDelivered Int     @default(0)
+  totalCancel    Int     @default(0)
+  apis           Json?
+}
+
+enum InventoryMovementType {
+  IN // purchase, restock
+  OUT // order, damage
+  ADJUST // manual correction
+  RETURN // returned from customer
+  CANCEL // cancelled order restore
+}
+
+enum ImageType {
+  MAIN
+  THUMBNAIL
+  GALLERY
+}
+
+enum CalculatedEnum {
+  NO
+  YES
+}
+
+enum TicketStatus {
+  pending
+  in_progress
+  resolved
+  closed
+}
