@@ -38,6 +38,27 @@ const addCustomerWishListCreate = async ( customerId, productId) => {
     }
 };
 
+const getWishListByCustomerId = async (customerId) => {
+    try {
+       return prisma.customerWishList.findMany({
+            where: {
+                customerId: parseInt(customerId),
+            },
+           include:{
+                product: {
+                    include: {images: true}
+                }
+           }
+        });
+    } catch (e) {
+        console.error(e);  // Log the error for debugging
+        throw e;  // Re-throw the error to be handled by calling code
+    } finally {
+        await prisma.$disconnect(); // Ensure Prisma client is properly disconnected after the operation
+    }
+};
+
 module.exports = {
     addCustomerWishListCreate,
+    getWishListByCustomerId
 };

@@ -40,7 +40,9 @@ model Customer {
 
   BankDetail BankDetail[]
 
-  supportTicket supportTicket[]
+  supportTicket        supportTicket[]
+  abandonedCarts       AbandonedCart[]
+  customerActivityLogs CustomerActivityLog[]
 }
 
 /**
@@ -85,6 +87,7 @@ model Product {
   // ✅ Correctly defined relation name
   ProductCategoryPivot ProductCategoryPivot[] @relation("ProductCategoryPivotRelation")
   inventories          Inventory[]
+  abandonedCartItems   AbandonedCartItem[]
 }
 
 model ProductBrand {
@@ -150,7 +153,6 @@ model ProductCategory {
   childrens    ProductCategory[] @relation("CategoryHierarchy")
   products     Product[]         @relation("ProductCategories")
   hasLocation  Boolean?
-  isFeatured   Boolean?          @default(true)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
@@ -206,6 +208,7 @@ model ProductVariant {
 
   CombinedVariantAttribute CombinedVariantAttribute[]
   inventories              Inventory[]
+  abandonedCartItems       AbandonedCartItem[]
 }
 
 model VariantAttribute {
@@ -353,6 +356,164 @@ model Payment {
   transactionId String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+model AbandonedCart {
+  id Int @id @default(autoincrement())
+
+  // User info (nullable for guest carts)
+  customerId Int?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  // Guest tracking
+  sessionId String? @unique
+  email     String?
+
+  // Cart totals snapshot
+  totalItems  Int     @default(0)
+  subtotal    Decimal @db.Decimal(10, 2)
+  discount    Decimal @default(0) @db.Decimal(10, 2)
+  totalAmount Decimal @db.Decimal(10, 2)
+
+  // Status
+  status CartStatus @default(ABANDONED)
+
+  // Recovery tracking
+  recoveredAt   DateTime?
+  lastEmailSent DateTime?
+  emailCount    Int       @default(0)
+
+  // Expiration
+  expiresAt DateTime?
+
+  // Relations
+  items AbandonedCartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([sessionId])
+  @@index([email])
+}
+
+model AbandonedCartItem {
+  id Int @id @default(autoincrement())
+
+  cartId Int
+  cart   AbandonedCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  // Optional variant support
+  variantId Int?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  quantity Int
+
+  // Snapshot pricing (IMPORTANT)
+  price Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+}
+
+model CustomerActivityLog {
+  id BigInt @id @default(autoincrement())
+
+  // User (nullable for guest actions)
+  customerId Int?
+  user       Customer? @relation(fields: [customerId], references: [id])
+
+  // Guest tracking
+  sessionId String?
+  email     String?
+
+  // Activity type
+  activityType ActivityType
+
+  // What entity was affected
+  entityType EntityType?
+  entityId   Int?
+
+  // Request context
+  ipAddress String?
+  userAgent String?
+  device    String?
+  browser   String?
+  os        String?
+
+  // Location (optional)
+  country String?
+  city    String?
+
+  // Extra metadata (VERY IMPORTANT)
+  metadata Json?
+
+  // Request source
+  referrer String?
+  url      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([customerId])
+  @@index([sessionId])
+  @@index([activityType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  LOGIN
+  LOGOUT
+  REGISTER
+
+  VIEW_PRODUCT
+  SEARCH
+  VIEW_CATEGORY
+
+  ADD_TO_CART
+  REMOVE_FROM_CART
+  UPDATE_CART
+
+  APPLY_COUPON
+  REMOVE_COUPON
+
+  START_CHECKOUT
+  COMPLETE_ORDER
+  CANCEL_ORDER
+
+  ADD_WISHLIST
+  REMOVE_WISHLIST
+
+  REVIEW_PRODUCT
+
+  FAILED_PAYMENT
+  SUCCESS_PAYMENT
+
+  PASSWORD_RESET_REQUEST
+  PASSWORD_CHANGED
+
+  ACCOUNT_UPDATED
+
+  OTHER
+}
+
+enum EntityType {
+  PRODUCT
+  CATEGORY
+  ORDER
+  CART
+  COUPON
+  REVIEW
+  USER
+}
+
+enum CartStatus {
+  ACTIVE
+  ABANDONED
+  RECOVERED
+  EXPIRED
 }
 
 enum PaymentStatus {

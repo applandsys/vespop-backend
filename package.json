@@ -38,8 +38,5 @@
   },
   "_moduleAliases": {
     "@": "src"
-  },
-  "engines": {
-    "node": "20.x"
   }
 }

@@ -10,6 +10,7 @@ const customerSupportController = require('@/modules/ecommerce/controller/user/s
 
 router.post('/order-submit',authenticateToken, customerOrderController.customerOrderSubmit);
 router.post('/add-wishlist',authenticateToken, customerWishListController.addWishList);
+router.get('/get-wishlist',authenticateToken, customerWishListController.getWishList);
 router.post('/review',authenticateToken, customerReviewController.customerReviewSubmit);
 
 router.get('/orderbyid/:id',authenticateToken, customerOrderController.customerOrderById);
