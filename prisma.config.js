@@ -1,8 +1,7 @@
-// prisma.config.ts
-import { defineConfig } from "prisma/config";
+const { defineConfig } = require("prisma/config");
 
-export default defineConfig({
+module.exports = defineConfig({
   migrate: {
-    url: process.env.DATABASE_URL!,
+    url: process.env.DATABASE_URL,
   },
 });
