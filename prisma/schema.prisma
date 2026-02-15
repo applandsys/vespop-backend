@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Customer {
@@ -149,7 +150,7 @@ model ProductCategory {
   childrens    ProductCategory[] @relation("CategoryHierarchy")
   products     Product[]         @relation("ProductCategories")
   hasLocation  Boolean?
-  isFeatured   Boolean? @default(true)
+  isFeatured   Boolean?          @default(true)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
