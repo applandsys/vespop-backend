@@ -159,7 +159,7 @@ model ProductCategory {
 
   // Flags
   hasLocation Boolean @default(false)
-  isFeatured  Boolean @default(false)
+  isFeatured  Boolean? @default(false)
 
   // Timestamps
   createdAt DateTime @default(now())
