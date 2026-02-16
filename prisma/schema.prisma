@@ -153,6 +153,7 @@ model ProductCategory {
   childrens    ProductCategory[] @relation("CategoryHierarchy")
   products     Product[]         @relation("ProductCategories")
   hasLocation  Boolean?
+  isFeatured   Boolean           @default(false)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
