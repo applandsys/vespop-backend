@@ -140,25 +140,33 @@ model ProductImage {
 }
 
 model ProductCategory {
-  id           Int               @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   name         String
-  slug         String            @unique
+  slug         String  @unique
   image        String?
   icon         String?
   color        String?
   metaKeywords String?
   seoMeta      Json?
-  parentId     Int?
-  parent       ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  childrens    ProductCategory[] @relation("CategoryHierarchy")
-  products     Product[]         @relation("ProductCategories")
-  hasLocation  Boolean?
-  isFeatured   Int           @default(0)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
 
-  // ✅ Optional reverse relation for pivot
-  ProductCategoryPivot ProductCategoryPivot[]
+  // Self-referencing category hierarchy
+  parentId Int?
+  parent   ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children ProductCategory[] @relation("CategoryHierarchy")
+
+  // Product relations
+  products Product[] @relation("ProductCategories")
+
+  // Flags
+  hasLocation Boolean @default(false)
+  isFeatured  Boolean @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Pivot relation (many-to-many)
+  pivots ProductCategoryPivot[]
 }
 
 model ProductCategoryPivot {
