@@ -63,7 +63,7 @@ model Product {
   discount         Float?  @default(0) // Percentage
   discountPrice    Float?  @default(0)
   point            Float?  @default(0) // Percentage
-  isFeatured       Boolean @default(false)
+  isFeatured       Int     @default(0)
   model            String?
   visibility       String  @default("published")
 
