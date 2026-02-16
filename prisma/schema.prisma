@@ -158,7 +158,7 @@ model ProductCategory {
   products Product[] @relation("ProductCategories")
 
   // Flags
-  hasLocation Boolean @default(false)
+  hasLocation Boolean  @default(false)
   isFeatured  Boolean? @default(false)
 
   // Timestamps

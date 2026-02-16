@@ -2,7 +2,19 @@
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED');
 
 -- CreateEnum
+CREATE TYPE "ActivityType" AS ENUM ('LOGIN', 'LOGOUT', 'REGISTER', 'VIEW_PRODUCT', 'SEARCH', 'VIEW_CATEGORY', 'ADD_TO_CART', 'REMOVE_FROM_CART', 'UPDATE_CART', 'APPLY_COUPON', 'REMOVE_COUPON', 'START_CHECKOUT', 'COMPLETE_ORDER', 'CANCEL_ORDER', 'ADD_WISHLIST', 'REMOVE_WISHLIST', 'REVIEW_PRODUCT', 'FAILED_PAYMENT', 'SUCCESS_PAYMENT', 'PASSWORD_RESET_REQUEST', 'PASSWORD_CHANGED', 'ACCOUNT_UPDATED', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "EntityType" AS ENUM ('PRODUCT', 'CATEGORY', 'ORDER', 'CART', 'COUPON', 'REVIEW', 'USER');
+
+-- CreateEnum
+CREATE TYPE "CartStatus" AS ENUM ('ACTIVE', 'ABANDONED', 'RECOVERED', 'EXPIRED');
+
+-- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED');
+
+-- CreateEnum
+CREATE TYPE "InventoryMovementType" AS ENUM ('IN', 'OUT', 'ADJUST', 'RETURN', 'CANCEL');
 
 -- CreateEnum
 CREATE TYPE "ImageType" AS ENUM ('MAIN', 'THUMBNAIL', 'GALLERY');
@@ -47,7 +59,7 @@ CREATE TABLE "Product" (
     "discount" DOUBLE PRECISION DEFAULT 0,
     "discountPrice" DOUBLE PRECISION DEFAULT 0,
     "point" DOUBLE PRECISION DEFAULT 0,
-    "isFeatured" BOOLEAN NOT NULL DEFAULT false,
+    "isFeatured" INTEGER DEFAULT 0,
     "model" TEXT,
     "visibility" TEXT NOT NULL DEFAULT 'published',
     "brandId" INTEGER,
@@ -119,7 +131,8 @@ CREATE TABLE "ProductCategory" (
     "metaKeywords" TEXT,
     "seoMeta" JSONB,
     "parentId" INTEGER,
-    "hasLocation" BOOLEAN,
+    "hasLocation" BOOLEAN NOT NULL DEFAULT false,
+    "isFeatured" BOOLEAN DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -233,6 +246,7 @@ CREATE TABLE "Order" (
     "discount" DOUBLE PRECISION,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "fraudCheckedId" INTEGER,
 
     CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
@@ -303,6 +317,64 @@ CREATE TABLE "Payment" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AbandonedCart" (
+    "id" SERIAL NOT NULL,
+    "customerId" INTEGER,
+    "sessionId" TEXT,
+    "email" TEXT,
+    "totalItems" INTEGER NOT NULL DEFAULT 0,
+    "subtotal" DECIMAL(10,2) NOT NULL,
+    "discount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "totalAmount" DECIMAL(10,2) NOT NULL,
+    "status" "CartStatus" NOT NULL DEFAULT 'ABANDONED',
+    "recoveredAt" TIMESTAMP(3),
+    "lastEmailSent" TIMESTAMP(3),
+    "emailCount" INTEGER NOT NULL DEFAULT 0,
+    "expiresAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AbandonedCart_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AbandonedCartItem" (
+    "id" SERIAL NOT NULL,
+    "cartId" INTEGER NOT NULL,
+    "productId" INTEGER NOT NULL,
+    "variantId" INTEGER,
+    "quantity" INTEGER NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AbandonedCartItem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CustomerActivityLog" (
+    "id" BIGSERIAL NOT NULL,
+    "customerId" INTEGER,
+    "sessionId" TEXT,
+    "email" TEXT,
+    "activityType" "ActivityType" NOT NULL,
+    "entityType" "EntityType",
+    "entityId" INTEGER,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "device" TEXT,
+    "browser" TEXT,
+    "os" TEXT,
+    "country" TEXT,
+    "city" TEXT,
+    "metadata" JSONB,
+    "referrer" TEXT,
+    "url" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CustomerActivityLog_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -707,6 +779,60 @@ CREATE TABLE "currency" (
 );
 
 -- CreateTable
+CREATE TABLE "Inventory" (
+    "id" SERIAL NOT NULL,
+    "productId" INTEGER NOT NULL,
+    "productVariantId" INTEGER,
+    "locationId" INTEGER,
+    "stock" INTEGER NOT NULL DEFAULT 0,
+    "reservedStock" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "warehouseId" INTEGER,
+
+    CONSTRAINT "Inventory_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "InventoryMovement" (
+    "id" SERIAL NOT NULL,
+    "inventoryId" INTEGER NOT NULL,
+    "type" "InventoryMovementType" NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "reference" TEXT,
+    "note" TEXT,
+    "createdBy" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "InventoryMovement_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Warehouse" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "address" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Warehouse_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "FraudChecked" (
+    "id" SERIAL NOT NULL,
+    "number" TEXT NOT NULL,
+    "orderId" INTEGER,
+    "totalParcel" INTEGER NOT NULL DEFAULT 0,
+    "totalDelivered" INTEGER NOT NULL DEFAULT 0,
+    "totalCancel" INTEGER NOT NULL DEFAULT 0,
+    "apis" JSONB,
+
+    CONSTRAINT "FraudChecked_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_ProductCategories" (
     "A" INTEGER NOT NULL,
     "B" INTEGER NOT NULL,
@@ -761,6 +887,33 @@ CREATE UNIQUE INDEX "ProductRating_customerId_productId_key" ON "ProductRating"(
 CREATE UNIQUE INDEX "Payment_orderId_key" ON "Payment"("orderId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "AbandonedCart_sessionId_key" ON "AbandonedCart"("sessionId");
+
+-- CreateIndex
+CREATE INDEX "AbandonedCart_customerId_idx" ON "AbandonedCart"("customerId");
+
+-- CreateIndex
+CREATE INDEX "AbandonedCart_sessionId_idx" ON "AbandonedCart"("sessionId");
+
+-- CreateIndex
+CREATE INDEX "AbandonedCart_email_idx" ON "AbandonedCart"("email");
+
+-- CreateIndex
+CREATE INDEX "CustomerActivityLog_customerId_idx" ON "CustomerActivityLog"("customerId");
+
+-- CreateIndex
+CREATE INDEX "CustomerActivityLog_sessionId_idx" ON "CustomerActivityLog"("sessionId");
+
+-- CreateIndex
+CREATE INDEX "CustomerActivityLog_activityType_idx" ON "CustomerActivityLog"("activityType");
+
+-- CreateIndex
+CREATE INDEX "CustomerActivityLog_entityType_entityId_idx" ON "CustomerActivityLog"("entityType", "entityId");
+
+-- CreateIndex
+CREATE INDEX "CustomerActivityLog_createdAt_idx" ON "CustomerActivityLog"("createdAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
@@ -771,6 +924,27 @@ CREATE INDEX "Location_parentId_idx" ON "Location"("parentId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Location_parentId_name_key" ON "Location"("parentId", "name");
+
+-- CreateIndex
+CREATE INDEX "Inventory_productId_idx" ON "Inventory"("productId");
+
+-- CreateIndex
+CREATE INDEX "Inventory_productVariantId_idx" ON "Inventory"("productVariantId");
+
+-- CreateIndex
+CREATE INDEX "Inventory_locationId_idx" ON "Inventory"("locationId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Inventory_productId_productVariantId_locationId_key" ON "Inventory"("productId", "productVariantId", "locationId");
+
+-- CreateIndex
+CREATE INDEX "InventoryMovement_inventoryId_idx" ON "InventoryMovement"("inventoryId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Warehouse_code_key" ON "Warehouse"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "FraudChecked_number_key" ON "FraudChecked"("number");
 
 -- CreateIndex
 CREATE INDEX "_ProductCategories_B_index" ON "_ProductCategories"("B");
@@ -839,6 +1013,9 @@ ALTER TABLE "Order" ADD CONSTRAINT "Order_shippingAddressId_fkey" FOREIGN KEY ("
 ALTER TABLE "Order" ADD CONSTRAINT "Order_billingAddressId_fkey" FOREIGN KEY ("billingAddressId") REFERENCES "Address"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Order" ADD CONSTRAINT "Order_fraudCheckedId_fkey" FOREIGN KEY ("fraudCheckedId") REFERENCES "FraudChecked"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -855,6 +1032,21 @@ ALTER TABLE "BankDetail" ADD CONSTRAINT "BankDetail_customerId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AbandonedCart" ADD CONSTRAINT "AbandonedCart_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AbandonedCartItem" ADD CONSTRAINT "AbandonedCartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "AbandonedCart"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AbandonedCartItem" ADD CONSTRAINT "AbandonedCartItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AbandonedCartItem" ADD CONSTRAINT "AbandonedCartItem_variantId_fkey" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CustomerActivityLog" ADD CONSTRAINT "CustomerActivityLog_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CustomerPoint" ADD CONSTRAINT "CustomerPoint_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -915,6 +1107,21 @@ ALTER TABLE "supportTicket" ADD CONSTRAINT "supportTicket_userId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "ticketReponse" ADD CONSTRAINT "ticketReponse_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "supportTicket"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Inventory" ADD CONSTRAINT "Inventory_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Inventory" ADD CONSTRAINT "Inventory_productVariantId_fkey" FOREIGN KEY ("productVariantId") REFERENCES "ProductVariant"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Inventory" ADD CONSTRAINT "Inventory_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Inventory" ADD CONSTRAINT "Inventory_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "InventoryMovement" ADD CONSTRAINT "InventoryMovement_inventoryId_fkey" FOREIGN KEY ("inventoryId") REFERENCES "Inventory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_ProductCategories" ADD CONSTRAINT "_ProductCategories_A_fkey" FOREIGN KEY ("A") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
