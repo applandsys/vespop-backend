@@ -59,7 +59,7 @@ CREATE TABLE "Product" (
     "discount" DOUBLE PRECISION DEFAULT 0,
     "discountPrice" DOUBLE PRECISION DEFAULT 0,
     "point" DOUBLE PRECISION DEFAULT 0,
-    "isFeatured" INTEGER DEFAULT 0,
+    "isFeatured" BOOLEAN NOT NULL DEFAULT false,
     "model" TEXT,
     "visibility" TEXT NOT NULL DEFAULT 'published',
     "brandId" INTEGER,
