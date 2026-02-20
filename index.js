@@ -53,6 +53,12 @@ const adminStatsRoute = require('@/modules/ecommerce/route/stats/adminStatsRoute
 // Inventory
 const inventoryStockRoute = require('@/modules/inventory/route/stockRoute');
 
+// Site Post Admin
+const sitePostAdminRoute = require('@/modules/site-post/route/siteRouteAdmin');
+const sitePostPublicRoute = require('@/modules/site-post/route/siteRoutePublic');
+
+// site post Public
+
 // Third Party API
 const thirdPartyApi = require('@/modules/thirdparty/route/fraudCheckRoute')
 /**
@@ -85,6 +91,10 @@ app.use(`/${process.env.VERSION}/user/data`, userDataRoute);
 
 // Inventory
 app.use(`/${process.env.VERSION}/inventory`, inventoryStockRoute);
+
+// Site Post
+app.use(`/${process.env.VERSION}/admin/site-post`, sitePostAdminRoute);
+app.use(`/${process.env.VERSION}/site-post`, sitePostPublicRoute);
 
 // ThirdParty APIS
 app.use(`/${process.env.VERSION}/third-party`, thirdPartyApi);

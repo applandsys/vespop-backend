@@ -1,0 +1,76 @@
+const {insertPost, fetchPost} = require("@/modules/site-post/model/sitePostModel");
+const generateSlug = require("@/utils/slugGenerate");
+
+const addSitePost = async (req, res) => {
+    try {
+        const { title, excerpt, content ,metaKeywords, seoMeta, categoryId} = req.body;
+        const featuredImage = req.files['featuredImage']?.[0]?.filename || null;
+        const slug = generateSlug(title);
+
+        const post = await insertPost(
+            {
+                    title,
+                    slug,
+                    excerpt,
+                    content,
+                    type: 'page',
+                    featuredImage,
+                    metaKeywords : 'Page',
+                    seoMeta: '',
+                    userId: 1,
+                    categoryId: 1
+                },
+        ); // ✅ USE DIRECTLY
+        return res.status(200).json({
+            success: true,
+            post
+        });
+    } catch (error) {
+        console.error("Post Insert Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to Insert Post"
+        });
+    }
+};
+
+const getSitePost = async (req, res) => {
+    try {
+        const post = await fetchPost(); // ✅ USE DIRECTLY
+        return res.status(200).json({
+            success: true,
+            post
+        });
+    } catch (error) {
+        console.error("Post Fetch Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to Fetch Post"
+        });
+    }
+};
+
+const getSitePostById = async (req, res) => {
+    try {
+        const data = req.body;
+        const post = await insertPost(data); // ✅ USE DIRECTLY
+        return res.status(200).json({
+            success: true,
+            post
+        });
+    } catch (error) {
+        console.error("Post Insert Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to Insert Post"
+        });
+    }
+};
+
+
+
+module.exports = {
+    addSitePost,
+    getSitePost,
+    getSitePostById
+};
