@@ -11,8 +11,22 @@ const fetchPost = (data) => {
     return prisma.blogPost.findMany();
 };
 
+const fetchPostById = (id) => {
+    return prisma.blogPost.findFirst({
+        where: { id }
+    });
+};
+
+const fetchPostBySlug = (slug) => {
+    return prisma.blogPost.findFirst({
+        where: { slug }
+    });
+};
+
 
 module.exports = {
     insertPost,
-    fetchPost
+    fetchPost,
+    fetchPostById,
+    fetchPostBySlug
 }

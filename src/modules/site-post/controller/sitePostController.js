@@ -1,4 +1,4 @@
-const {insertPost, fetchPost} = require("@/modules/site-post/model/sitePostModel");
+const {insertPost, fetchPost, fetchPostBySlug, fetchPostById} = require("@/modules/site-post/model/sitePostModel");
 const generateSlug = require("@/utils/slugGenerate");
 
 const addSitePost = async (req, res) => {
@@ -52,8 +52,8 @@ const getSitePost = async (req, res) => {
 
 const getSitePostById = async (req, res) => {
     try {
-        const data = req.body;
-        const post = await insertPost(data); // ✅ USE DIRECTLY
+        const {id} = req.params;
+        const post = await fetchPostById(id); // ✅ USE DIRECTLY
         return res.status(200).json({
             success: true,
             post
@@ -67,10 +67,29 @@ const getSitePostById = async (req, res) => {
     }
 };
 
+const getSitePostBySlug = async (req, res) => {
+    try {
+        const {slug} = req.params;
+        const post = await fetchPostBySlug(slug); // ✅ USE DIRECTLY
+        return res.status(200).json({
+            success: true,
+            post
+        });
+    } catch (error) {
+        console.error("Post Fetch Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to Fetch Post"
+        });
+    }
+};
+
+
 
 
 module.exports = {
     addSitePost,
     getSitePost,
-    getSitePostById
+    getSitePostById,
+    getSitePostBySlug
 };

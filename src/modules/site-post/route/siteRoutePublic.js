@@ -5,7 +5,8 @@ const sitePostController = require('@/modules/site-post/controller/sitePostContr
 // v1/site-post
 router.get('/', sitePostController.getSitePost);
 
-router.get('/post/:id', sitePostController.getSitePostById);
+router.get('/id/:id', sitePostController.getSitePostById);
+router.get('/slug/:slug', sitePostController.getSitePostBySlug);
 
 
 module.exports = router;

@@ -94,7 +94,7 @@ app.use(`/${process.env.VERSION}/inventory`, inventoryStockRoute);
 
 // Site Post
 app.use(`/${process.env.VERSION}/admin/site-post`, sitePostAdminRoute);
-app.use(`/${process.env.VERSION}/site-post`, sitePostPublicRoute);
+app.use(`/${process.env.VERSION}/public/site-post`, sitePostPublicRoute);
 
 // ThirdParty APIS
 app.use(`/${process.env.VERSION}/third-party`, thirdPartyApi);
