@@ -13,7 +13,15 @@ router.post(
     sitePostController.addSitePost
 );
 
-router.get('/post/:id', sitePostController.getSitePostById);
+router.put(
+    '/',
+    sitePost.fields([
+        { name: 'featuredImage', maxCount: 1 }
+    ]),
+    sitePostController.updateSitePost
+);
+
+router.get('/single/:postId', sitePostController.getSitePostById);
 
 
 module.exports = router;

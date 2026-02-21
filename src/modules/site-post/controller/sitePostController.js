@@ -1,4 +1,4 @@
-const {insertPost, fetchPost, fetchPostBySlug, fetchPostById} = require("@/modules/site-post/model/sitePostModel");
+const {insertPost, fetchPost, fetchPostBySlug, fetchPostById, updatePost} = require("@/modules/site-post/model/sitePostModel");
 const generateSlug = require("@/utils/slugGenerate");
 
 const addSitePost = async (req, res) => {
@@ -34,6 +34,39 @@ const addSitePost = async (req, res) => {
     }
 };
 
+const updateSitePost = async (req, res) => {
+    try {
+        const { id, title, excerpt, content ,metaKeywords, seoMeta, categoryId} = req.body;
+        const featuredImage = req.files['featuredImage']?.[0]?.filename || null;
+        const slug = generateSlug(title);
+
+        const post = await updatePost(id,
+            {
+                title,
+                slug,
+                excerpt,
+                content,
+                type: 'page',
+                featuredImage,
+                metaKeywords : 'Page',
+                seoMeta: '',
+                userId: 1,
+                categoryId: 1
+            },
+        ); // ✅ USE DIRECTLY
+        return res.status(200).json({
+            success: true,
+            post
+        });
+    } catch (error) {
+        console.error("Post Insert Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to Insert Post"
+        });
+    }
+};
+
 const getSitePost = async (req, res) => {
     try {
         const post = await fetchPost(); // ✅ USE DIRECTLY
@@ -52,8 +85,8 @@ const getSitePost = async (req, res) => {
 
 const getSitePostById = async (req, res) => {
     try {
-        const {id} = req.params;
-        const post = await fetchPostById(id); // ✅ USE DIRECTLY
+        const {postId} = req.params;
+        const post = await fetchPostById(postId); // ✅ USE DIRECTLY
         return res.status(200).json({
             success: true,
             post
@@ -89,6 +122,7 @@ const getSitePostBySlug = async (req, res) => {
 
 module.exports = {
     addSitePost,
+    updateSitePost,
     getSitePost,
     getSitePostById,
     getSitePostBySlug
