@@ -36,33 +36,35 @@ const addSitePost = async (req, res) => {
 
 const updateSitePost = async (req, res) => {
     try {
-        const { id, title, excerpt, content ,metaKeywords, seoMeta, categoryId} = req.body;
-        const featuredImage = req.files['featuredImage']?.[0]?.filename || null;
+        const { id, title, excerpt, content, metaKeywords, seoMeta, categoryId } = req.body;
+
+        const featuredImage =
+            req.files?.['featuredImage']?.[0]?.filename || undefined;
+
         const slug = generateSlug(title);
 
-        const post = await updatePost(id,
-            {
-                title,
-                slug,
-                excerpt,
-                content,
-                type: 'page',
-                featuredImage,
-                metaKeywords : 'Page',
-                seoMeta: '',
-                userId: 1,
-                categoryId: 1
-            },
-        ); // ✅ USE DIRECTLY
+        const post = await updatePost(id, {
+            title,
+            slug,
+            excerpt,
+            content,
+            type: "page",
+            ...(featuredImage && { featuredImage }), // only if uploaded
+            metaKeywords: metaKeywords || "Page",
+            seoMeta: seoMeta || "",
+            userId: 1,
+            categoryId: categoryId || 1
+        });
+
         return res.status(200).json({
             success: true,
             post
         });
     } catch (error) {
-        console.error("Post Insert Error:", error);
+        console.error("Post Update Error:", error);
         return res.status(500).json({
             success: false,
-            message: "Failed to Insert Post"
+            message: "Failed to Update Post"
         });
     }
 };
