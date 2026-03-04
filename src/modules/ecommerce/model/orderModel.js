@@ -2,22 +2,49 @@ const { PrismaClient , OrderStatus} = require('@prisma/client');
 const getTodayDate = require("../../../utils/getTodayDate");
 const prisma = new PrismaClient();
 
-const getOrderList = async () => {
-    const orderList = await prisma.order.findMany(
-        {
-            include: {
-                orderItems: {
-                    include: {
-                        product: true
+const getOrderList = async (type) => {
+
+    let orderList = [];
+
+    if(type!==null){
+        orderList = await prisma.order.findMany(
+            {
+                data: {
+                    where: {
+                        status: type
                     }
                 },
-                customer: true,
-                shippingAddress: false,
-                billingAddress: true,
-                payment: true,
-            },
-        }
-    );
+                include: {
+                    orderItems: {
+                        include: {
+                            product: true
+                        }
+                    },
+                    customer: true,
+                    shippingAddress: false,
+                    billingAddress: true,
+                    payment: true,
+                },
+            }
+        );
+    }else{
+         orderList = await prisma.order.findMany(
+            {
+                include: {
+                    orderItems: {
+                        include: {
+                            product: true
+                        }
+                    },
+                    customer: true,
+                    shippingAddress: false,
+                    billingAddress: true,
+                    payment: true,
+                },
+            }
+        );
+    }
+
     return orderList || false;
 }
 

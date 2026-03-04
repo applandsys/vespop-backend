@@ -118,9 +118,8 @@ const editProductCategory = async (req, res) => {
 };
 
 
-
 // NORMALIZE Variant
-const normalizeVariants = (attributeProducts, modelNumber) => {
+const normalizeVariants = (attributeProducts, model) => {
     const raw = safeParseJsonArray(attributeProducts);
     return raw
         .map((item) => {
@@ -130,7 +129,7 @@ const normalizeVariants = (attributeProducts, modelNumber) => {
 
             return {
                 sku: item?.sku || null,
-                model: modelNumber || null,
+                model: model || null,
                 quantity: toNumberOr(item?.quantity, 0),
                 buyPrice: toNumberOr(item?.buyPrice, 0),
                 sellPrice: toNumberOr(item?.sellPrice, 0),
@@ -155,10 +154,11 @@ const addProduct = async (req, res) => {
             point,
             isFeatured,
             visibility,
-            modelNumber,
+            model,
             attributeProducts,
             productLabels,
             existingImages,
+            tags,
             locations,
             brandId
         } = req.body;
@@ -167,10 +167,22 @@ const addProduct = async (req, res) => {
         const { id } = req.params;
         const productId = id ? parseInt(id) : null;
 
+        let jsonString = "";
+
+        if (tags && tags.trim() !== "") {
+            jsonString = JSON.stringify(
+                tags
+                    .split(',')
+                    .map(t => t.trim())
+                    .filter(t => t !== "")
+            );
+        }
+
         // Check if product already exists (only for create)
         const productExist = await prisma.product.findFirst({
             where: { slug }
         });
+
         if (!productId && productExist) {
             return res.status(400).json({ success: false, message: "Product already exists" });
         }
@@ -205,16 +217,12 @@ const addProduct = async (req, res) => {
         }));
 
         // Normalize variants
-        const productVariants = normalizeVariants(attributeProducts, modelNumber);
+        const productVariants = normalizeVariants(attributeProducts, model);
 
         // Calculate discount
         const discountPct = toNumberOr(discount, 0);
         const sell = toNumberOr(sellPrice, 0);
         const discountAmount = discountPct && sell ? getPercentToFlat(discountPct, sell) : 0;
-
-        console.log("Discount amount: ", discount);
-        console.log("Discount amount number: ", discountPct);
-        console.log("Discount Amount percent: ", discountAmount);
 
         let newProduct;
 
@@ -257,25 +265,26 @@ const addProduct = async (req, res) => {
                     specification,
                     visibility,
                     brandId: brandId ? parseInt(brandId) : null,
+                    model,
                     buyPrice: buyPrice != null ? toNumberOr(buyPrice, null) : null,
                     sellPrice: sell,
                     discount: discountPct,
                     discountPrice: sell ? sell - discountAmount : null,
                     point: point != null ? toNumberOr(point, 0) : 0,
                     isFeatured: isFeatured === "true" || isFeatured === true,
-
                     // ✅ Correct: reset all categories before connecting new ones
                     categories: { set: categories.map((id) => ({ id })) },
-
                     // Optional image uploads
                     images: imageData.length ? { create: imageData } : undefined,
-
                     // Labels
                     labels: {
                         deleteMany: {}, // Clear existing
-                        create: parsedProductLabels.map((label) => ({ labelId: label.id })).filter(Boolean),
+                        create: parsedProductLabels.map((label) => ({ labelId: label })).filter(Boolean),
                     },
-
+                    tags:{
+                        deleteMany: {},
+                        create: JSON.parse(jsonString).map((tag)=>({ tagName: tag, slug: generateSlug(tag) }) ).filter(Boolean),
+                    },
                     // Variants
                     productVariants: productVariants.length
                         ? {
@@ -326,6 +335,7 @@ const addProduct = async (req, res) => {
                     specification,
                     visibility,
                     brandId: brandId ? parseInt(brandId) : null,
+                    model,
                     buyPrice: buyPrice != null ? toNumberOr(buyPrice, null) : null,
                     sellPrice: sell,
                     discount: discountPct,
@@ -335,7 +345,10 @@ const addProduct = async (req, res) => {
                     categories: { connect: categories.map((id) => ({ id })) },
                     images: imageData.length ? { create: imageData } : undefined,
                     labels: {
-                        create: parsedProductLabels.map((label) => ({ labelId: label.id })).filter(Boolean),
+                        create: parsedProductLabels.map((label) => ({ labelId: label })).filter(Boolean),
+                    },
+                    tags:{
+                        create: JSON.parse(jsonString).map((tag)=>({ tagName: tag, slug: generateSlug(tag) }) ).filter(Boolean),
                     },
                     productVariants: productVariants.length
                         ? {
@@ -374,6 +387,7 @@ const addProduct = async (req, res) => {
                 },
             });
         }
+
 
         // ===================
         // LOCATIONS HANDLING

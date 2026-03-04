@@ -65,6 +65,8 @@ const getProductDetailBySlug = async (productSlug) => {
     });
 }
 
+
+
 const getProductLabelsModel = async () => {
     return prisma.label.findMany();
 }

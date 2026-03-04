@@ -12,6 +12,7 @@ router.get('/featured', productController.featuredProducts);
 router.get('/new', productController.newProducts);
 router.get('/list/:slug', productController.productBySlug);
 router.get('/detail/:slug', productController.productDetailBySlug);
+router.get('/exist/:name', productController.productExistByName);
 router.get('/list/:catid', productController.productByCatId);
 router.get('/attribute/all',productController.productAttributes);
 

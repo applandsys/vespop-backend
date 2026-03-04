@@ -2,8 +2,10 @@ const {getOrderList, changeStatusPaid, pointDistributor, affiliateCommission, or
 
 const orderList = async (req, res) => {
 
+    const type = req.params.type || null;
+
     try{
-        const orders = await getOrderList();
+        const orders = await getOrderList(type);
 
         res.status(201).json({
             message: 'Order List successfully',

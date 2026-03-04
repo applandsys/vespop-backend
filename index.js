@@ -53,14 +53,10 @@ const adminStatsRoute = require('@/modules/ecommerce/route/stats/adminStatsRoute
 // Inventory
 const inventoryStockRoute = require('@/modules/inventory/route/stockRoute');
 
-// Site Post Admin
-const sitePostAdminRoute = require('@/modules/site-post/route/siteRouteAdmin');
-const sitePostPublicRoute = require('@/modules/site-post/route/siteRoutePublic');
-
-// site post Public
-
 // Third Party API
 const thirdPartyApi = require('@/modules/thirdparty/route/fraudCheckRoute')
+
+const courierRoute = require('@/modules/thirdparty/route/courierRoute')
 /**
  * ======================
  *     API ENDPOINTS
@@ -92,12 +88,9 @@ app.use(`/${process.env.VERSION}/user/data`, userDataRoute);
 // Inventory
 app.use(`/${process.env.VERSION}/inventory`, inventoryStockRoute);
 
-// Site Post
-app.use(`/${process.env.VERSION}/admin/site-post`, sitePostAdminRoute);
-app.use(`/${process.env.VERSION}/public/site-post`, sitePostPublicRoute);
-
 // ThirdParty APIS
 app.use(`/${process.env.VERSION}/third-party`, thirdPartyApi);
+app.use(`/${process.env.VERSION}/courier`, courierRoute);
 /**
  * ======================
  *   STATIC FILES
@@ -110,7 +103,7 @@ app.use(express.static('public'));
  *      SERVER
  * ======================
  */
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 4001;
 
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on ${port} PORT`);

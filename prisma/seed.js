@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
     const hashedPassword = await bcrypt.hash('123456', 10);
-    const adminPassword = await bcrypt.hash('AllahRasul786', 10);
+    const adminPassword = await bcrypt.hash('Dhaka@1230', 10);
     const todayDate = getTodayDateYYYYMMDD();
 
     // Creating customers
@@ -14,22 +14,31 @@ async function main() {
             {
                 first_name: 'John Doe',
                 uid: parseInt(todayDate)+1,
-                email: 'user@vespop.com',
+                email: 'john@example.com',
                 password: hashedPassword,
                 gender: 'male',
                 phone: '01255',
                 role: 'user',
-            }
+            },
+            {
+                first_name: 'Hub Manager',
+                uid: parseInt(todayDate)+2,
+                email: 'manager@omninestglobal.com',
+                password: adminPassword,
+                gender: 'male',
+                phone: '000000000',
+                role: 'admin',
+            },
         ]
     });
     await prisma.siteSetting.create({
         data: {
-            site_name: 'Vespop Ecommerce',
-            description: 'Vespop is a Ecommerce app',
-            logo: 'logo.png',
-            address: 'Mirpur, Dhaka',
+            site_name: 'My Amazing Site',
+            description: 'A site for all things amazing.',
+            logo: 'logo_url_here',
+            address: '123 Amazing St, Cityville',
             phone: '123-456-7890',
-            email: 'contact@vespop.com',
+            email: 'contact@amazing.com',
             whatsapp: '1234567890',
             default_currency: 1
         },
@@ -46,7 +55,7 @@ async function main() {
     await prisma.user.create({
         data: {
             name : 'Super Administrator',
-            email: 'admin@vespop.com',
+            email: 'admin@demo.com',
             password : adminPassword,
             role   : 'admin',
         }

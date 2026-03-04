@@ -18,8 +18,11 @@ model Customer {
   password   String
   gender     String
   dob        String?
+  photo      String?
+  district   String?
+  note       String?
   sponsor_id Int?
-  role       String     @default("user")
+  role       String     @default("customer")
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   sponsor    Customer?  @relation("SponsorRelation", fields: [sponsor_id], references: [id])
@@ -34,15 +37,19 @@ model Customer {
   Payable            PayableDisburse[]
   CustomerDocument   CustomerDocument[]
   CustomerWishList   CustomerWishList[]
-  fraudCustomer      fraudCustomer[]
-  abandonCart        abandonCart[]
+  fraudCustomer      FraudCustomer[]
+  abandonCart        AbandonCart[]
   ProductRating      ProductRating[]
 
   BankDetail BankDetail[]
 
-  supportTicket        supportTicket[]
+  supportTicket        SupportTicket[]
   abandonedCarts       AbandonedCart[]
   customerActivityLogs CustomerActivityLog[]
+  customerBlocking     CustomerBlocking[]
+
+  visitorLog       VisitorLog[]
+  customerPayments CustomerPayment[]
 }
 
 /**
@@ -53,6 +60,8 @@ model Product {
   id               Int     @id @default(autoincrement())
   name             String
   slug             String  @unique
+  skuNumber        String?
+  productCode      String?
   description      String?
   shortDescription String?
   metaKeywords     String?
@@ -65,7 +74,11 @@ model Product {
   point            Float?  @default(0) // Percentage
   isFeatured       Boolean @default(false)
   model            String?
+  barcode          String?
   visibility       String  @default("published")
+
+  vendorId Int
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
 
   brandId Int?
   brand   ProductBrand? @relation(fields: [brandId], references: [id])
@@ -88,6 +101,7 @@ model Product {
   ProductCategoryPivot ProductCategoryPivot[] @relation("ProductCategoryPivotRelation")
   inventories          Inventory[]
   abandonedCartItems   AbandonedCartItem[]
+  purchases            Purchase[]
 }
 
 model ProductBrand {
@@ -140,33 +154,25 @@ model ProductImage {
 }
 
 model ProductCategory {
-  id           Int     @id @default(autoincrement())
+  id           Int               @id @default(autoincrement())
   name         String
-  slug         String  @unique
+  slug         String            @unique
   image        String?
   icon         String?
   color        String?
   metaKeywords String?
   seoMeta      Json?
+  parentId     Int?
+  parent       ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  childrens    ProductCategory[] @relation("CategoryHierarchy")
+  products     Product[]         @relation("ProductCategories")
+  hasLocation  Boolean?
+  isFeatured   Boolean?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
-  // Self-referencing category hierarchy
-  parentId Int?
-  parent   ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children ProductCategory[] @relation("CategoryHierarchy")
-
-  // Product relations
-  products Product[] @relation("ProductCategories")
-
-  // Flags
-  hasLocation Boolean  @default(false)
-  isFeatured  Boolean? @default(false)
-
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Pivot relation (many-to-many)
-  pivots ProductCategoryPivot[]
+  // ✅ Optional reverse relation for pivot
+  ProductCategoryPivot ProductCategoryPivot[]
 }
 
 model ProductCategoryPivot {
@@ -274,6 +280,7 @@ model Order {
   id                Int             @id @default(autoincrement())
   customer          Customer        @relation(fields: [customerId], references: [id])
   customerId        Int
+  invoiceNumber     String?
   orderItems        OrderItem[]
   status            OrderStatus     @default(PENDING)
   totalAmount       Float
@@ -285,21 +292,18 @@ model Order {
   payment           Payment?
   discount          Float?
   CustomerPoint     CustomerPoint[]
+  customerNote      String?
+  OrderNote         String?
+  vendorId          Int
+  vendor            Vendor          @relation(fields: [vendorId], references: [id])
 
   AffiliateComission AffiliateComission[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   fraudChecked       FraudChecked?        @relation(fields: [fraudCheckedId], references: [id])
   fraudCheckedId     Int?
-}
-
-enum OrderStatus {
-  PENDING
-  PAID
-  SHIPPED
-  DELIVERED
-  CANCELLED
-  RETURNED
+  orderMovements     OrderMovement[]
+  customerPayments   CustomerPayment[]
 }
 
 model OrderItem {
@@ -543,9 +547,9 @@ model User {
 
   BlogPost BlogPost[]
 
-  activityLog activityLog[]
+  activityLog ActivityLog[]
 
-  ticketReponse ticketReponse[]
+  ticketReponse TicketReponse[]
 }
 
 model CustomerPoint {
@@ -679,17 +683,6 @@ model Banner {
   updatedAt       DateTime @updatedAt
 }
 
-model vendor {
-  id        Int      @id @default(autoincrement())
-  name      String?
-  email     String?
-  phone     String?
-  logo      String?
-  extData   Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model BlogCategory {
   id           Int            @id @default(autoincrement())
   name         String
@@ -720,12 +713,13 @@ model BlogPost {
   userId        Int
   categoryId    Int
   category      BlogCategory @relation(fields: [categoryId], references: [id])
+  postType      String
   user          User         @relation(fields: [userId], references: [id])
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 }
 
-model webSetting {
+model WebSetting {
   id           Int      @id @default(autoincrement())
   name         String
   slogan       String
@@ -743,7 +737,7 @@ model webSetting {
   updatedAt    DateTime @updatedAt
 }
 
-model smtpSetting {
+model SmtpSetting {
   id         Int      @id @default(autoincrement())
   name       String
   port       String
@@ -758,7 +752,7 @@ model smtpSetting {
   updatedAt  DateTime @updatedAt
 }
 
-model smsGatewaySetting {
+model SmsGatewaySetting {
   id         Int      @id @default(autoincrement())
   name       String
   to         String
@@ -772,7 +766,7 @@ model smsGatewaySetting {
   updatedAt  DateTime @updatedAt
 }
 
-model apiSetting {
+model ApiSetting {
   id                 Int      @id @default(autoincrement())
   name               String
   serviceType        String?
@@ -787,7 +781,7 @@ model apiSetting {
   updatedAt          DateTime @updatedAt
 }
 
-model fraudCustomer {
+model FraudCustomer {
   id          Int      @id @default(autoincrement())
   customerId  Int
   customer    Customer @relation(fields: [customerId], references: [id])
@@ -795,7 +789,7 @@ model fraudCustomer {
   extData     Json?
 }
 
-model abandonCart {
+model AbandonCart {
   id         Int      @id @default(autoincrement())
   customerId Int
   customer   Customer @relation(fields: [customerId], references: [id])
@@ -805,7 +799,7 @@ model abandonCart {
   updatedAt  DateTime @updatedAt
 }
 
-model activityLog {
+model ActivityLog {
   id        Int      @id @default(autoincrement())
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
@@ -814,7 +808,7 @@ model activityLog {
   updatedAt DateTime @updatedAt
 }
 
-model shippingCostSetting {
+model ShippingCostSetting {
   id           Int      @id @default(autoincrement())
   location     String?
   price        String?
@@ -825,7 +819,7 @@ model shippingCostSetting {
   updatedAt    DateTime @updatedAt
 }
 
-model mediaStorage {
+model MediaStorage {
   id        Int      @id @default(autoincrement())
   name      String?
   type      String?
@@ -837,7 +831,7 @@ model mediaStorage {
   updatedAt DateTime @updatedAt
 }
 
-model supportTicket {
+model SupportTicket {
   id         Int          @id @default(autoincrement())
   userId     Int
   user       Customer     @relation(fields: [userId], references: [id])
@@ -845,17 +839,17 @@ model supportTicket {
   message    String
   priority   String?
   attachment String?
-  status     TicketStatus @default(pending) // Use enum here
+  status     TicketStatus @default(PENDING) // Use enum here
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  ticketReponse ticketReponse[]
+  ticketReponse TicketReponse[]
 }
 
-model ticketReponse {
+model TicketReponse {
   id        Int           @id @default(autoincrement())
   ticketId  Int
-  tickets   supportTicket @relation(fields: [ticketId], references: [id])
+  tickets   SupportTicket @relation(fields: [ticketId], references: [id])
   userId    Int
   user      User[]
   message   String
@@ -864,8 +858,8 @@ model ticketReponse {
   updatedAt DateTime      @updatedAt
 }
 
-model siteSetting {
-  id               Int     @id @default(autoincrement())
+model SiteSetting {
+  id               Int      @id @default(autoincrement())
   site_name        String
   description      String
   logo             String
@@ -874,17 +868,19 @@ model siteSetting {
   email            String
   whatsapp         String
   default_currency Int
-  is_maintenance   Boolean @default(false)
+  is_maintenance   Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
-model socialSetting {
+model SocialSetting {
   id          Int    @id @default(autoincrement())
   social_name String
   social_url  String
   social_icon String
 }
 
-model currency {
+model Currency {
   id            Int     @id @default(autoincrement())
   currency_name String
   currency_sign String
@@ -960,6 +956,355 @@ model FraudChecked {
   apis           Json?
 }
 
+model Courier {
+  id         Int     @id @default(autoincrement())
+  name       String  @unique
+  url        String?
+  api_key    String?
+  username   String?
+  password   String?
+  storeId    String?
+  secret_key String?
+  isActive   Boolean @default(false)
+  status     String?
+}
+
+model OrderMovement {
+  id              Int     @id @default(autoincrement())
+  orderId         Int
+  order           Order   @relation(fields: [orderId], references: [id])
+  courierId       Int?
+  courierReponse  String?
+  currentPosition String?
+  info            String?
+  remarks         String?
+}
+
+model ChartofAccount {
+  id        Int         @id @default(autoincrement())
+  name      String
+  type      AccountType
+  createdBy Int?
+  createdAt DateTime    @default(now())
+
+  transaction Transaction[]
+}
+
+model Transaction {
+  id             Int            @id @default(autoincrement())
+  particular     String
+  amount         Float
+  accountId      Int
+  chartofAccount ChartofAccount @relation(fields: [accountId], references: [id])
+  type           String?
+  source         String?
+  note           String?
+  status         String?
+  createdBy      Int?
+  createdAt      DateTime       @default(now())
+}
+
+model Purchase {
+  id         Int      @id @default(autoincrement())
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  Int
+  quantity   Int
+  buyPrice   Float
+  paidAmount Int?
+  dueAmount  Int?
+  supplierId Int
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  createdBy  Int?
+  createdAt  DateTime @default(now())
+}
+
+model Vendor {
+  id        Int          @id @default(autoincrement())
+  name      String?
+  address   String?
+  phone     String?
+  email     String
+  password  String
+  type      String?
+  logo      String?
+  slug      String?
+  note      String?
+  status    ActiveStatus @default(ACTIVE)
+  createdBy Int?
+  createdAt DateTime     @default(now())
+
+  vendorContact VendorContact[]
+  vendorPayment VendorPayment[]
+  product       Product[]
+  order         Order[]
+  landingPage   LandingPage[]
+}
+
+model VendorContact {
+  id          Int      @id @default(autoincrement())
+  vendorId    Int
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  designation String?
+  name        String?
+  address     String?
+  phone       String?
+  email       String?
+  createdAt   DateTime @default(now())
+}
+
+model VendorPayment {
+  id         Int      @id @default(autoincrement())
+  vendorId   Int
+  vendor     Vendor   @relation(fields: [vendorId], references: [id])
+  amount     Int
+  type       String?
+  particular String?
+  status     String?
+  createdAt  DateTime @default(now())
+}
+
+//
+model Supplier {
+  id        Int          @id @default(autoincrement())
+  name      String?
+  address   String?
+  phone     String?
+  email     String
+  password  String
+  type      String?
+  logo      String?
+  slug      String?
+  note      String?
+  status    ActiveStatus @default(ACTIVE)
+  createdBy Int?
+  createdAt DateTime     @default(now())
+
+  supplierContact SupplierContact[]
+  supplierPayment SupplierPayment[]
+
+  purchase Purchase[]
+}
+
+model SupplierContact {
+  id          Int       @id @default(autoincrement())
+  supplierId  Int
+  designation String?
+  name        String?
+  address     String?
+  phone       String?
+  email       String?
+  createdAt   DateTime  @default(now())
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+}
+
+model SupplierPayment {
+  id         Int      @id @default(autoincrement())
+  supplierId Int
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  amount     Int
+  type       String?
+  status     String?
+  method     String?
+  particular String?
+  createdAt  DateTime @default(now())
+}
+
+model CustomerPayment {
+  id            Int      @id @default(autoincrement())
+  customerId    Int
+  customer      Customer @relation(fields: [customerId], references: [id])
+  orderId       Int
+  order         Order    @relation(fields: [orderId], references: [id])
+  amount        Int
+  discount      Int?     @default(0)
+  returned      Int?     @default(0)
+  method        String?
+  transactionId String?
+  note          String?
+  createdAt     DateTime @default(now())
+}
+
+model PaymentGateway {
+  id        Int          @id @default(autoincrement())
+  name      String
+  type      String
+  username  String?
+  password  String?
+  apiKey    String?
+  apiSecret String?
+  baseUrl   String?
+  logo      String?
+  extraInfo Json?
+  status    ActiveStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model SMSGateway {
+  id        Int          @id @default(autoincrement())
+  name      String
+  type      String
+  username  String?
+  password  String?
+  apiKey    String?
+  apiSecret String?
+  baseUrl   String?
+  logo      String?
+  extraInfo Json?
+  status    ActiveStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model SMTPSetup {
+  id             Int          @id @default(autoincrement())
+  port           String
+  host           String?
+  authentication Boolean      @default(false)
+  security       String?
+  type           String?
+  protocal       String?
+  username       String?
+  password       String?
+  apiKey         String?
+  apiSecret      String?
+  baseUrl        String?
+  extraInfo      Json?
+  status         ActiveStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model ThirdPartyGateway {
+  id        Int          @id @default(autoincrement())
+  name      String
+  type      String?
+  username  String?
+  password  String?
+  apiKey    String?
+  apiSecret String?
+  baseUrl   String?
+  logo      String?
+  extraInfo Json?
+  status    ActiveStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model CustomerBlocking {
+  id           Int      @id @default(autoincrement())
+  customerId   Int
+  customer     Customer @relation(fields: [customerId], references: [id])
+  idAddress    String?
+  blockingType String?
+}
+
+model VisitorLog {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  idAddress  String?
+  pageName   String?
+  actions    String?
+  createdAt  DateTime @default(now())
+}
+
+model SMSGroup {
+  id              Int              @id @default(autoincrement())
+  name            String
+  createdAt       DateTime         @default(now())
+  smsgroupMembers SMSGroupMember[]
+  smssendingLogs  SMSSendingLog[]
+}
+
+model SMSGroupMember {
+  id         Int      @id @default(autoincrement())
+  groupId    Int
+  group      SMSGroup @relation(fields: [groupId], references: [id])
+  memberType String
+  memberId   Int
+  createdAt  DateTime @default(now())
+}
+
+model SMSSendingLog {
+  id        Int      @id @default(autoincrement())
+  count     Int
+  groupId   Int
+  group     SMSGroup @relation(fields: [groupId], references: [id])
+  textSent  String?
+  createdAt DateTime @default(now())
+}
+
+model FBPixelSetup {
+  id              Int          @id @default(autoincrement())
+  pixelId         String?
+  metaAccesstoken String?
+  testEventId     String?
+  createdAt       DateTime     @default(now())
+  status          ActiveStatus @default(INVACTIVE)
+}
+
+model CouponCode {
+  id               Int          @id @default(autoincrement())
+  promoCode        String?
+  offerType        String?
+  amount           Int?         @default(0)
+  lastDate         String?
+  minimumBuyAmount Int?         @default(0)
+  image            String?
+  status           ActiveStatus @default(ACTIVE)
+}
+
+model LandingPage {
+  id                  Int                 @id @default(autoincrement())
+  title               String?
+  subTitle            String?
+  heroImage           String?
+  video               String?
+  calltoAction        String?
+  description         String?
+  benefits            String?
+  faqtext             Json?
+  status              String?
+  templateId          Int
+  vendorId            Int
+  vendor              Vendor              @relation(fields: [vendorId], references: [id])
+  landingPageTemplate LandingPageTemplate @relation(fields: [templateId], references: [id])
+  createdAt           DateTime            @default(now())
+}
+
+model LandingPageTemplate {
+  id           Int     @id @default(autoincrement())
+  title        String?
+  subTitle     String?
+  heroImage    String?
+  video        String?
+  calltoAction String?
+  description  String?
+  benefits     String?
+  faqtext      Json?
+  status       String?
+  templateId   Int?
+
+  landingPage LandingPage[]
+
+  createdAt DateTime @default(now())
+}
+
+model LandingPageProduct {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  title     String?
+  subTitle  String?
+  heroImage String?
+  video     String?
+  note      String?
+  benefits  String?
+  faqtext   Json?
+  status    String?
+  createdAt DateTime @default(now())
+}
+
 enum InventoryMovementType {
   IN // purchase, restock
   OUT // order, damage
@@ -980,8 +1325,37 @@ enum CalculatedEnum {
 }
 
 enum TicketStatus {
-  pending
-  in_progress
-  resolved
-  closed
+  PENDING
+  INPROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+  FAKE
+  DUPLICATE
+  MINDCHANGED
+  OUTOFZONE
+  DAMAGED
+}
+
+enum ActiveStatus {
+  ACTIVE
+  INVACTIVE
+  SUSPENED
+  TERMINATED
+}
+
+enum AccountType {
+  ASSET
+  LIABLITIES
+  EXPENSE
+  INCOME
+  EQUITY
 }

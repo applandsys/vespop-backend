@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const {getProductById, getProductAttribute, getProductBySlug} = require("../model/productModel");
 const {getAllCategories, getAllBrands, insertBrand} = require("../model/categoryModel");
 const {getProductDetailBySlug} = require("@/modules/ecommerce/model/productModel");
+const generateSlug = require("@/utils/slugGenerate");
 const prisma = new PrismaClient();
 
 const allProducts =  async (req,res) => {
@@ -245,9 +246,27 @@ const labelWiseProducts = async (req, res) => {
     }
 };
 
-module.exports = {
-    labelWiseProducts,
-};
+const productExistByName = async (req,res) => {
+
+    try {
+        const { name } = req.params;
+
+        const slug = generateSlug(name);
+
+        const product =  await getProductDetailBySlug(slug);
+
+        if (!product) {
+            return res.status(200).json({success: true,exist: false, message: 'Product not found'});
+        }else{
+            return res.status(200).json({success: true,exist: true, message: 'Product Exist'});
+        }
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+}
+
+
 
 
 module.exports = {
@@ -261,7 +280,8 @@ module.exports = {
     productBySlug,
     productDetailBySlug,
     productByCatId,
-    labelWiseProducts
+    labelWiseProducts,
+    productExistByName
 };
 
 
