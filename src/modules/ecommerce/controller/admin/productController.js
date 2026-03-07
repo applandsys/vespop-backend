@@ -335,6 +335,7 @@ const addProduct = async (req, res) => {
                     specification,
                     visibility,
                     brandId: brandId ? parseInt(brandId) : null,
+                    vendorId: 1,
                     model,
                     buyPrice: buyPrice != null ? toNumberOr(buyPrice, null) : null,
                     sellPrice: sell,

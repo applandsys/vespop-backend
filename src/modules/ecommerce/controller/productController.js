@@ -267,8 +267,6 @@ const productExistByName = async (req,res) => {
 }
 
 
-
-
 module.exports = {
     productCategories,
     featuredProducts,
@@ -284,36 +282,3 @@ module.exports = {
     productExistByName
 };
 
-
-/*
-
- const product = await prisma.product.create({
-    data: {
-      name: 'Sample Product',
-      description: 'This is a sample product',
-      buyPrice: 50.0,
-      price: 100.0,
-      discountPrice: 80.0,
-      point: 5.0,
-      isFeatured: true,
-      categories: {
-        connect: [
-          { [bannerId]: 1 },
-          { [bannerId]: 2 },
-        ],
-      },
-      images: {
-        create: [
-          { url: 'https://example.com/image1.jpg' },
-          { url: 'https://example.com/image2.jpg' },
-        ],
-      },
-    },
-    include: {
-      categories: true,
-      images: true,
-    },
-  });
-
-
-  */
