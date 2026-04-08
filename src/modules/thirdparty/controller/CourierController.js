@@ -1,8 +1,13 @@
-const {courierList, createCourier} = require("@/modules/thirdparty/model/CoureirModel");
+const {courierList, createCourier, ActiveCourierList} = require("@/modules/thirdparty/model/CoureirModel");
 
 
 const getCourierList = async (req,res) =>{
     const data = await courierList();
+    res.json(data);
+}
+
+const getActiveCourierList = async (req,res) =>{
+    const data = await ActiveCourierList();
     res.json(data);
 }
 
@@ -33,6 +38,7 @@ const addCourier = async (req,res) =>{
 
 module.exports = {
     getCourierList,
+    getActiveCourierList,
     addCourier,
 }
 

@@ -52,6 +52,21 @@ async function main() {
         }
     });
 
+    await prisma.vendor.create({
+        data: {
+            name : "Default",
+            address: "n/a",
+            phone: "na",
+            email: "vendor@demo.com",
+            password:  adminPassword,
+            type : "default",
+            logo: "n/a",
+            slug: "default",
+            note: "default vendor to protect error",
+            status: "ACTIVE"
+        }
+    });
+
     await prisma.user.create({
         data: {
             name : 'Super Administrator',

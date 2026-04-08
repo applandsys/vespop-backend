@@ -977,6 +977,8 @@ model OrderMovement {
   courierReponse  String?
   currentPosition String?
   info            String?
+  cod_amount      Int?
+  note            String?
   remarks         String?
 }
 
@@ -1303,6 +1305,21 @@ model LandingPageProduct {
   faqtext   Json?
   status    String?
   createdAt DateTime @default(now())
+}
+
+model CourierLocation {
+  id                    Int      @default(autoincrement())
+  courierId             Int
+  locationType          String
+  locationId            String
+  parentId              String?
+  parentName            String?
+  homeDeliveryAvailable Boolean?
+  pickupAvailable       Boolean?
+  locationName          String
+  originalResponse      Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 enum InventoryMovementType {
