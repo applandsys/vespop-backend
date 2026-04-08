@@ -862,6 +862,8 @@ CREATE TABLE "OrderMovement" (
     "courierReponse" TEXT,
     "currentPosition" TEXT,
     "info" TEXT,
+    "cod_amount" INTEGER,
+    "note" TEXT,
     "remarks" TEXT,
 
     CONSTRAINT "OrderMovement_pkey" PRIMARY KEY ("id")

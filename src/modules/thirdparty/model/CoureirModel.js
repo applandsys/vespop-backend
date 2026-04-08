@@ -5,6 +5,14 @@ const courierList = async () => {
     return prisma.courier.findMany();
 }
 
+const ActiveCourierList = async () => {
+    return prisma.courier.findMany({
+        where: {
+            isActive: true
+        }
+    });
+}
+
 const createCourier = async (data) => {
     return prisma.courier.create({
         data: data
@@ -13,5 +21,6 @@ const createCourier = async (data) => {
 
 module.exports = {
     courierList,
+    ActiveCourierList,
     createCourier
 }
