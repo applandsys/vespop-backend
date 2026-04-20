@@ -28,7 +28,7 @@ const getReviews = async (status="approved",skip = 0, limit = 50) => {
 };
 
 
-export const updateProductRatingStatus = async (
+const updateProductRatingStatus = async (
     ratingId,
     status
 ) => {
@@ -40,7 +40,7 @@ export const updateProductRatingStatus = async (
 
 
 // ratingIds []
-export const bulkApproveProductRatings = async (ratingIds) => {
+const bulkApproveProductRatings = async (ratingIds) => {
     if (!ratingIds || ratingIds.length === 0) {
         throw new Error("No rating IDs provided");
     }
