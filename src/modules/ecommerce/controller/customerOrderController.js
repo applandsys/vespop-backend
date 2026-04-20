@@ -142,12 +142,11 @@ const customerOrderSubmit = async (req, res) => {
 const customerOrderById = async (req, res) => {
     try {
         const { id } = req.params;
-        const customerId = req.user.id; // from auth middleware
+      //  const customerId = req.user.id; // from auth middleware
 
         const order = await prisma.order.findFirst({
             where: {
-                id: parseInt(id),
-                customerId: customerId, // 🔐 ownership check
+                id: parseInt(id)
             },
             include: {
                 orderItems: {

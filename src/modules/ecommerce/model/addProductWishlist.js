@@ -38,6 +38,30 @@ const addCustomerWishListCreate = async ( customerId, productId) => {
     }
 };
 
+const removeWishlist = async (id, customerId) => {
+    try {
+        const wishlist = await prisma.customerWishList.findFirst({
+            where: {
+                id: Number(id),
+                customerId: Number(customerId),
+            },
+        });
+
+        if (!wishlist) {
+            throw new Error("Wishlist item not found or not owned by customer");
+        }
+
+        return await prisma.customerWishList.delete({
+            where: {
+                id: Number(id),
+            },
+        });
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
+};
+
 const getWishListByCustomerId = async (customerId) => {
     try {
        return prisma.customerWishList.findMany({
@@ -60,5 +84,6 @@ const getWishListByCustomerId = async (customerId) => {
 
 module.exports = {
     addCustomerWishListCreate,
+    removeWishlist,
     getWishListByCustomerId
 };

@@ -48,6 +48,28 @@ const getOrderList = async (type) => {
     return orderList || false;
 }
 
+const getOrderListWithCount = async (type, limit = 10, offset = 0) => {
+    const where = type !== null ? { status: type } : {};
+
+    const [orders, total] = await prisma.$transaction([
+        prisma.order.findMany({
+            where,
+            skip: offset,
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                orderItems: { include: { product: true } },
+                customer: true,
+                billingAddress: true,
+                payment: true,
+            },
+        }),
+        prisma.order.count({ where }),
+    ]);
+
+    return { orders, total };
+};
+
 const changeStatusPaid = async (orderId) => {
 
     try{
@@ -143,6 +165,7 @@ const affiliateCommission = async (orderId) => {
 module.exports = {
     orderDetail,
     getOrderList,
+    getOrderListWithCount,
     changeStatusPaid,
     pointDistributor,
     affiliateCommission
