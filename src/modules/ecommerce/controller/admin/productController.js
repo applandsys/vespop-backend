@@ -7,7 +7,7 @@ const getPercentToFlat = require("../../../../utils/getPercentToFlat");
 const {getProductLabelsModel} = require("../../model/productModel");
 const generateSlug = require("../../../../utils/slugGenerate");
 const {safeParseJsonArray, toNumberOr} = require("../../../../services/helpers");
-const {getAllCategories, getAllCategoriesWithoutCount} = require("@/modules/ecommerce/model/categoryModel");
+const {getAllCategoriesWithoutCount} = require("@/modules/ecommerce/model/categoryModel");
 
 const categoryById = async (req, res) => {
     const id = req.params.id;
@@ -272,20 +272,16 @@ const addProduct = async (req, res) => {
                     discountPrice: sell ? sell - discountAmount : null,
                     point: point != null ? toNumberOr(point, 0) : 0,
                     isFeatured: isFeatured === "true" || isFeatured === true,
-                    // ✅ Correct: reset all categories before connecting new ones
                     categories: { set: categories.map((id) => ({ id })) },
-                    // Optional image uploads
                     images: imageData.length ? { create: imageData } : undefined,
-                    // Labels
                     labels: {
-                        deleteMany: {}, // Clear existing
+                        deleteMany: {},
                         create: parsedProductLabels.map((label) => ({ labelId: label })).filter(Boolean),
                     },
                     tags:{
                         deleteMany: {},
                         create: JSON.parse(jsonString).map((tag)=>({ tagName: tag, slug: generateSlug(tag) }) ).filter(Boolean),
                     },
-                    // Variants
                     productVariants: productVariants.length
                         ? {
                             create: productVariants.map((variant) => ({

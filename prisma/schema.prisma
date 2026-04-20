@@ -44,12 +44,13 @@ model Customer {
   BankDetail BankDetail[]
 
   supportTicket        SupportTicket[]
-  abandonedCarts       AbandonedCart[]
   customerActivityLogs CustomerActivityLog[]
   customerBlocking     CustomerBlocking[]
 
   visitorLog       VisitorLog[]
   customerPayments CustomerPayment[]
+  payments         Payment[]
+  abandonedCarts   AbandonedCart[]
 }
 
 /**
@@ -264,8 +265,9 @@ model ProductRating {
   review     String?
   customerId Int
   customer   Customer @relation(fields: [customerId], references: [id])
-  product    Product  @relation(fields: [productId], references: [id])
   productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  status     String   @default("pending")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -304,6 +306,7 @@ model Order {
   fraudCheckedId     Int?
   orderMovements     OrderMovement[]
   customerPayments   CustomerPayment[]
+  courierOrders      courierOrder[]
 }
 
 model OrderItem {
@@ -360,15 +363,73 @@ model BankDetail {
 }
 
 model Payment {
-  id            Int           @id @default(autoincrement())
-  order         Order         @relation(fields: [orderId], references: [id])
-  orderId       Int           @unique
-  method        String
-  status        PaymentStatus
-  paidAt        DateTime?
-  transactionId String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                  Int                  @id @default(autoincrement())
+  order               Order                @relation(fields: [orderId], references: [id])
+  orderId             Int                  @unique
+  customerId          Int
+  customer            Customer             @relation(fields: [customerId], references: [id])
+  method              String
+  amount              Int
+  currency            String
+  status              PaymentStatus
+  paidAt              DateTime?
+  transactionId       String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  paymentTransactions PaymentTransaction[]
+  paymentRefunds      PaymentRefund[]
+}
+
+model PaymentTransaction {
+  id        String @id @default(uuid())
+  paymentId Int
+
+  provider      String
+  transactionId String
+  valId         String?
+  bankTranId    String?
+
+  amount Decimal @db.Decimal(10, 2)
+  status String
+
+  rawResponse Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([transactionId])
+}
+
+model PaymentRefund {
+  id        String @id @default(uuid())
+  paymentId Int
+
+  refundRef String
+  amount    Decimal @db.Decimal(10, 2)
+
+  status      String
+  rawResponse Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([refundRef])
+}
+
+model PaymentWebhookLog {
+  id        String  @id @default(uuid())
+  provider  String
+  payload   Json
+  headers   Json?
+  processed Boolean @default(false)
+
+  createdAt DateTime @default(now())
 }
 
 model AbandonedCart {
@@ -474,66 +535,6 @@ model CustomerActivityLog {
   @@index([activityType])
   @@index([entityType, entityId])
   @@index([createdAt])
-}
-
-enum ActivityType {
-  LOGIN
-  LOGOUT
-  REGISTER
-
-  VIEW_PRODUCT
-  SEARCH
-  VIEW_CATEGORY
-
-  ADD_TO_CART
-  REMOVE_FROM_CART
-  UPDATE_CART
-
-  APPLY_COUPON
-  REMOVE_COUPON
-
-  START_CHECKOUT
-  COMPLETE_ORDER
-  CANCEL_ORDER
-
-  ADD_WISHLIST
-  REMOVE_WISHLIST
-
-  REVIEW_PRODUCT
-
-  FAILED_PAYMENT
-  SUCCESS_PAYMENT
-
-  PASSWORD_RESET_REQUEST
-  PASSWORD_CHANGED
-
-  ACCOUNT_UPDATED
-
-  OTHER
-}
-
-enum EntityType {
-  PRODUCT
-  CATEGORY
-  ORDER
-  CART
-  COUPON
-  REVIEW
-  USER
-}
-
-enum CartStatus {
-  ACTIVE
-  ABANDONED
-  RECOVERED
-  EXPIRED
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
 }
 
 model User {
@@ -957,16 +958,17 @@ model FraudChecked {
 }
 
 model Courier {
-  id         Int     @id @default(autoincrement())
-  name       String  @unique
+  id         Int        @id @default(autoincrement())
+  name       String     @unique
   url        String?
   api_key    String?
   username   String?
   password   String?
   storeId    String?
   secret_key String?
-  isActive   Boolean @default(false)
+  isActive   Boolean    @default(false)
   status     String?
+  shipments  Shipment[]
 }
 
 model OrderMovement {
@@ -980,6 +982,17 @@ model OrderMovement {
   cod_amount      Int?
   note            String?
   remarks         String?
+}
+
+model courierOrder {
+  id            Int    @id @default(autoincrement())
+  orderId       Int
+  order         Order  @relation(fields: [orderId], references: [id])
+  courier       String
+  consignmentId String
+  status        String
+  price         Float
+  rawResponse   Json
 }
 
 model ChartofAccount {
@@ -1084,7 +1097,8 @@ model Supplier {
   supplierContact SupplierContact[]
   supplierPayment SupplierPayment[]
 
-  purchase Purchase[]
+  purchase     Purchase[]
+  supplierDues SupplierDue[]
 }
 
 model SupplierContact {
@@ -1100,15 +1114,30 @@ model SupplierContact {
 }
 
 model SupplierPayment {
-  id         Int      @id @default(autoincrement())
-  supplierId Int
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
-  amount     Int
-  type       String?
-  status     String?
-  method     String?
-  particular String?
-  createdAt  DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  supplierId   Int
+  supplier     Supplier @relation(fields: [supplierId], references: [id])
+  amount       Int
+  type         String?
+  typeSourceId Int?
+  status       String?
+  method       String?
+  particular   String?
+  balance      Int
+  createdAt    DateTime @default(now())
+}
+
+model SupplierDue {
+  id           Int      @id @default(autoincrement())
+  supplierId   Int
+  supplier     Supplier @relation(fields: [supplierId], references: [id])
+  amount       Int
+  type         String?
+  typeSourceId Int?
+  status       String?
+  method       String?
+  particular   String?
+  createdAt    DateTime @default(now())
 }
 
 model CustomerPayment {
@@ -1308,7 +1337,7 @@ model LandingPageProduct {
 }
 
 model CourierLocation {
-  id                    Int      @default(autoincrement())
+  id                    Int      @id @default(autoincrement())
   courierId             Int
   locationType          String
   locationId            String
@@ -1322,12 +1351,95 @@ model CourierLocation {
   updatedAt             DateTime @updatedAt
 }
 
+enum ActivityType {
+  LOGIN
+  LOGOUT
+  REGISTER
+
+  VIEW_PRODUCT
+  SEARCH
+  VIEW_CATEGORY
+
+  ADD_TO_CART
+  REMOVE_FROM_CART
+  UPDATE_CART
+
+  APPLY_COUPON
+  REMOVE_COUPON
+
+  START_CHECKOUT
+  COMPLETE_ORDER
+  CANCEL_ORDER
+
+  ADD_WISHLIST
+  REMOVE_WISHLIST
+
+  REVIEW_PRODUCT
+
+  FAILED_PAYMENT
+  SUCCESS_PAYMENT
+
+  PASSWORD_RESET_REQUEST
+  PASSWORD_CHANGED
+
+  ACCOUNT_UPDATED
+
+  OTHER
+}
+
+enum EntityType {
+  PRODUCT
+  CATEGORY
+  ORDER
+  CART
+  COUPON
+  REVIEW
+  USER
+}
+
+enum CartStatus {
+  ACTIVE
+  ABANDONED
+  RECOVERED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
 enum InventoryMovementType {
   IN // purchase, restock
   OUT // order, damage
   ADJUST // manual correction
   RETURN // returned from customer
   CANCEL // cancelled order restore
+}
+
+model Shipment {
+  id            Int       @id @default(autoincrement())
+  orderId       Int
+  courierId     Int
+  courierName   String
+  consignmentId String    @unique
+  status        String
+  price         Float
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  Courier Courier @relation(fields: [courierId], references: [id])
+}
+
+model CourierStatusLog {
+  id            Int      @id @default(autoincrement())
+  consignmentId String
+  status        String
+  rawPayload    Json
+  createdAt     DateTime @default(now())
 }
 
 enum ImageType {
@@ -1345,6 +1457,8 @@ enum TicketStatus {
   PENDING
   INPROGRESS
   RESOLVED
+  REJECTED
+  APPROVED
   CLOSED
 }
 
