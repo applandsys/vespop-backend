@@ -124,6 +124,7 @@ v1/admin/product/add-product-category
 v1/category/products/category-slug (Category with product with category-slug)
 [Product Reviews by Product ID](http://localhost:4000/v1/product/reviews/1)
 
+http://localhost:4000/v1/supplier/payment/due 
 
 
 ### DB GUID
