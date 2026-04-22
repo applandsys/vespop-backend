@@ -7,7 +7,9 @@ const getPercentToFlat = require("../../../../utils/getPercentToFlat");
 const {getProductLabelsModel} = require("../../model/productModel");
 const generateSlug = require("../../../../utils/slugGenerate");
 const {safeParseJsonArray, toNumberOr} = require("../../../../services/helpers");
-const {getAllCategoriesWithoutCount} = require("@/modules/ecommerce/model/categoryModel");
+const {getAllCategoriesWithoutCount, getAllCategories, getCategoriesWithChildren, getCategoriesWithParent,
+    getCategoryWithParentChain
+} = require("@/modules/ecommerce/model/categoryModel");
 
 const categoryById = async (req, res) => {
     const id = req.params.id;
@@ -555,6 +557,21 @@ const allCategories =  async (req,res) => {
     res.json(categories);
 }
 
+const mainCategories = async (req, res) => {
+    const categories = await getCategoriesWithChildren();
+    res.json(categories);
+}
+
+const subCategories = async (req, res) => {
+    const categories = await getCategoriesWithParent();
+    res.json(categories);
+}
+
+const categoryTree = async (req, res) => {
+    const categories = await getCategoryWithParentChain();
+    res.json(categories);
+}
+
 module.exports = {
     addProductCategory,
     categoryById,
@@ -565,5 +582,8 @@ module.exports = {
     addProductAttribute,
     addProductBrand,
     allCategories,
-    editProductCategory
+    editProductCategory,
+    mainCategories,
+    subCategories,
+    categoryTree
 };

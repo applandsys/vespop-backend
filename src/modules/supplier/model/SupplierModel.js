@@ -56,6 +56,22 @@ const supplierCurrentBalance = async (supplierId) => {
 
     return dueAmount - paidAmount;
 };
+
+
+const deleteModel = async (id) => {
+    return await prisma.supplier.delete({
+        where: { id: Number(id) }
+    });
+}
+
+const supplierDueModel = async () => {
+    return prisma.supplierDue.findMany();
+}
+
+const supplierPaidModel = async () => {
+    return prisma.supplierPayment.findMany();
+}
+
 module.exports = {
     supplierList,
     supplierById,
@@ -63,5 +79,8 @@ module.exports = {
     updateSupplierById,
     createSupplierPayment,
     createSupplierDue,
-    supplierCurrentBalance
+    supplierCurrentBalance,
+    deleteModel,
+    supplierDueModel,
+    supplierPaidModel
 }

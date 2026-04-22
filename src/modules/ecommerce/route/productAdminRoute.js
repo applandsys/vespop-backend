@@ -8,6 +8,9 @@ const brandLogo = require("@/middleware/brandLogo");
 // v1/admin/product
 router.get('/category/:id', productAdminController.categoryById);
 router.get('/categories', productAdminController.allCategories); // v1/admin/product/categories
+router.get('/categories/main', productAdminController.mainCategories); // v1/admin/product/categories
+router.get('/categories/sub', productAdminController.subCategories); // v1/admin/product/categories
+router.get('/categories/tree', productAdminController.categoryTree); // v1/admin/product/categories
 
 // v1/admin/product/add-product-category
 router.post(

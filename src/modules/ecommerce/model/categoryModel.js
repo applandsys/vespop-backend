@@ -32,6 +32,54 @@ const getAllCategoriesWithoutCount = async () => {
     });
 }
 
+const getCategoriesWithChildren = async () => {
+    return prisma.productCategory.findMany({
+        where: {
+            parentId: null,
+        },
+        include: {
+            childrens: {
+                include: {
+                    childrens: true, // second level
+                },
+            },
+            _count: {
+                select: {
+                    products: true,
+                },
+            },
+        },
+    });
+};
+
+
+const getCategoriesWithParent = async () => {
+    return prisma.productCategory.findMany({
+        include: {
+            parent: true,
+            _count: {
+                select: {
+                    products: true,
+                },
+            },
+        },
+    });
+};
+
+
+const getCategoryWithParentChain = async (id) => {
+    return prisma.productCategory.findUnique({
+        where: { id },
+        include: {
+            parent: {
+                include: {
+                    parent: true,
+                },
+            },
+        },
+    });
+};
+
 const getCategory = async (catId) => {
     return prisma.productCategory.findUnique({
         where: {
@@ -161,5 +209,8 @@ module.exports = {
     getAllBrands,
     insertBrand,
     getAllCategoriesWithoutCount,
-    getCategoryDetailBySlug
+    getCategoryDetailBySlug,
+    getCategoriesWithChildren,
+    getCategoriesWithParent,
+    getCategoryWithParentChain
 }
