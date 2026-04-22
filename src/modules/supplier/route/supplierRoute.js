@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const supplierController = require('@/modules/supplier/controller/supplierController');
+const SupplierController = require('@/modules/supplier/controller/SupplierController');
 
 // v1/supplier
-router.get('/', supplierController.getSupplier);
-router.get('/:id', supplierController.getSupplierById);
+router.get('/', SupplierController.getSupplier);
+router.get('/:id', SupplierController.getSupplierById);
 
 /*
 { "name": "Sumya & CO",
@@ -19,9 +19,9 @@ router.get('/:id', supplierController.getSupplierById);
   "status" : "ACTIVE"
   }
  */
-router.post('/', supplierController.addSupplier);
-router.put('/:id', supplierController.updateSupplier);
-router.delete('/', supplierController.deleteSupplierById);
+router.post('/', SupplierController.addSupplier);
+router.put('/:id', SupplierController.updateSupplier);
+router.delete('/', SupplierController.deleteSupplierById);
 
 /*
 { "name": "Sumya & CO",
@@ -37,12 +37,12 @@ router.delete('/', supplierController.deleteSupplierById);
   }
  */
 
-router.post('/payment', supplierController.addSupplierPayment);
+router.post('/payment', SupplierController.addSupplierPayment);
 
 // v1/supplier
 
-router.get('/payment/due', supplierController.supplierPaymentDue);
-router.get('/payment/paid', supplierController.supplierPaymentPaid);
+router.get('/payment/due', SupplierController.supplierPaymentDue);
+router.get('/payment/paid', SupplierController.supplierPaymentPaid);
 
 
 module.exports = router;
