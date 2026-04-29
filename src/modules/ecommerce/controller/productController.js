@@ -223,7 +223,15 @@ const labelWiseProducts = async (req, res) => {
                     },
                 },
                 categories: true,
-                productVariants: true,
+                productVariants: {
+                    include: {
+                        variantAttributes: {
+                            include: {
+                                attributeValue: true
+                            }
+                        }
+                    }
+                },
                 ratings: true,
             },
             orderBy: {
