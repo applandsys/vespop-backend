@@ -32,16 +32,16 @@ model Customer {
   addresses      Address[]
   customerPoints CustomerPoint[]
 
-  AffiliateComission AffiliateComission[]
-  Withdraw           WithdrawRequest[]
-  Payable            PayableDisburse[]
-  CustomerDocument   CustomerDocument[]
-  CustomerWishList   CustomerWishList[]
+  affiliateComission AffiliateComission[]
+  withdrawRequest    WithdrawRequest[]
+  payableDisburse    PayableDisburse[]
+  customerDocument   CustomerDocument[]
+  customerWishList   CustomerWishList[]
   fraudCustomer      FraudCustomer[]
   abandonCart        AbandonCart[]
-  ProductRating      ProductRating[]
+  productRating      ProductRating[]
 
-  BankDetail BankDetail[]
+  bankDetail BankDetail[]
 
   supportTicket        SupportTicket[]
   customerActivityLogs CustomerActivityLog[]
@@ -49,13 +49,10 @@ model Customer {
 
   visitorLog       VisitorLog[]
   customerPayments CustomerPayment[]
-  payments         Payment[]
+  carts            Cart[]
   abandonedCarts   AbandonedCart[]
+  payments         Payment[]
 }
-
-/**
- * PRODUCT Start
- */
 
 model Product {
   id               Int     @id @default(autoincrement())
@@ -84,6 +81,9 @@ model Product {
   brandId Int?
   brand   ProductBrand? @relation(fields: [brandId], references: [id])
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   categories       ProductCategory[]  @relation("ProductCategories")
   images           ProductImage[]
   orderItems       OrderItem[]
@@ -95,14 +95,14 @@ model Product {
   locations        Location[]
   productLocations ProductLocation[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
   // ✅ Correctly defined relation name
-  ProductCategoryPivot ProductCategoryPivot[] @relation("ProductCategoryPivotRelation")
+  productCategoryPivot ProductCategoryPivot[] @relation("ProductCategoryPivotRelation")
   inventories          Inventory[]
   abandonedCartItems   AbandonedCartItem[]
   purchases            Purchase[]
+  cancelOrderItems     CancelOrderItems[]
+  cartItems            CartItem[]
+  orderReturnItems     OrderReturnItem[]
 }
 
 model ProductBrand {
@@ -168,6 +168,7 @@ model ProductCategory {
   childrens    ProductCategory[] @relation("CategoryHierarchy")
   products     Product[]         @relation("ProductCategories")
   hasLocation  Boolean?
+  position     String?
   isFeatured   Boolean?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
@@ -222,20 +223,23 @@ model ProductVariant {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
-  CombinedVariantAttribute CombinedVariantAttribute[]
+  combinedVariantAttribute CombinedVariantAttribute[]
   inventories              Inventory[]
   abandonedCartItems       AbandonedCartItem[]
+  cancelOrderItems         CancelOrderItems[]
+  cartItems                CartItem[]
 }
 
 model VariantAttribute {
-  id               Int            @id @default(autoincrement())
-  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  id               Int               @id @default(autoincrement())
+  productVariant   ProductVariant    @relation(fields: [productVariantId], references: [id])
   productVariantId Int
-  attributeValue   AttributeValue @relation(fields: [attributeValueId], references: [id])
+  attributeValue   AttributeValue    @relation(fields: [attributeValueId], references: [id])
   attributeValueId Int
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   OrderItem        OrderItem[]
+  orderReturnItems OrderReturnItem[]
 
   @@unique([productVariantId, attributeValueId])
 }
@@ -274,10 +278,6 @@ model ProductRating {
   @@unique([customerId, productId])
 }
 
-/**
- * PRODUCT End
- */
-
 model Order {
   id                Int             @id @default(autoincrement())
   customer          Customer        @relation(fields: [customerId], references: [id])
@@ -291,7 +291,6 @@ model Order {
   shippingAddressId Int
   billingAddress    Address         @relation("BillingAddress", fields: [billingAddressId], references: [id])
   billingAddressId  Int
-  payment           Payment?
   discount          Float?
   CustomerPoint     CustomerPoint[]
   customerNote      String?
@@ -299,14 +298,18 @@ model Order {
   vendorId          Int
   vendor            Vendor          @relation(fields: [vendorId], references: [id])
 
-  AffiliateComission AffiliateComission[]
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  fraudChecked       FraudChecked?        @relation(fields: [fraudCheckedId], references: [id])
-  fraudCheckedId     Int?
-  orderMovements     OrderMovement[]
-  customerPayments   CustomerPayment[]
-  courierOrders      courierOrder[]
+  affiliateComission  AffiliateComission[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  fraudChecked        FraudChecked?        @relation(fields: [fraudCheckedId], references: [id])
+  fraudCheckedId      Int?
+  orderMovements      OrderMovement[]
+  customerPayments    CustomerPayment[]
+  courierOrders       courierOrder[]
+  cancelOrders        CancelOrder[]
+  payment             Payment?
+  affiliateCommission AffiliateCommission?
+  orderReturns        OrderReturn[]
 }
 
 model OrderItem {
@@ -320,6 +323,34 @@ model OrderItem {
   point              Float             @default(0)
   variantAttribute   VariantAttribute? @relation(fields: [variantAttributeId], references: [id])
   variantAttributeId Int?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  orderReturns       OrderReturn[]
+}
+
+model OrderReturn {
+  id               Int               @id @default(autoincrement())
+  orderId          Int
+  order            Order             @relation(fields: [orderId], references: [id])
+  totalQuantity    Int
+  totalAmount      Float
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  orderItem        OrderItem?        @relation(fields: [orderItemId], references: [id])
+  orderItemId      Int?
+  orderReturnItems OrderReturnItem[]
+}
+
+model OrderReturnItem {
+  id                 Int               @id @default(autoincrement())
+  orderReturnId      Int
+  orderReturn        OrderReturn       @relation(fields: [orderReturnId], references: [id])
+  productId          Int
+  product            Product           @relation(fields: [productId], references: [id])
+  variantAttribute   VariantAttribute? @relation(fields: [variantAttributeId], references: [id])
+  variantAttributeId Int?
+  price              Int
+  quantity           Int
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 }
@@ -381,9 +412,8 @@ model Payment {
 }
 
 model PaymentTransaction {
-  id        String @id @default(uuid())
-  paymentId Int
-
+  id            String  @id @default(uuid())
+  paymentId     Int
   provider      String
   transactionId String
   valId         String?
@@ -396,8 +426,7 @@ model PaymentTransaction {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment   Payment  @relation(fields: [paymentId], references: [id])
 
   @@index([paymentId])
   @@index([transactionId])
@@ -415,8 +444,7 @@ model PaymentRefund {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment   Payment  @relation(fields: [paymentId], references: [id])
 
   @@index([paymentId])
   @@index([refundRef])
@@ -548,9 +576,13 @@ model User {
 
   BlogPost BlogPost[]
 
-  activityLog ActivityLog[]
+  activityLog ActivityLogUser[]
 
   ticketReponse TicketReponse[]
+  cancelOrders  CancelOrder[]
+  cart          Cart?           @relation(fields: [cartId], references: [id])
+  cartId        Int?
+  affiliate     Affiliate?
 }
 
 model CustomerPoint {
@@ -800,7 +832,7 @@ model AbandonCart {
   updatedAt  DateTime @updatedAt
 }
 
-model ActivityLog {
+model ActivityLogUser {
   id        Int      @id @default(autoincrement())
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
@@ -812,7 +844,7 @@ model ActivityLog {
 model ShippingCostSetting {
   id           Int      @id @default(autoincrement())
   location     String?
-  price        String?
+  price        Float
   isByLocation Boolean  @default(false)
   isFree       Boolean  @default(false)
   extData      Json?
@@ -1002,10 +1034,10 @@ model ChartofAccount {
   createdBy Int?
   createdAt DateTime    @default(now())
 
-  transaction Transaction[]
+  transaction AccountTransaction[]
 }
 
-model Transaction {
+model AccountTransaction {
   id             Int            @id @default(autoincrement())
   particular     String
   amount         Float
@@ -1020,17 +1052,18 @@ model Transaction {
 }
 
 model Purchase {
-  id         Int      @id @default(autoincrement())
-  product    Product  @relation(fields: [productId], references: [id])
-  productId  Int
-  quantity   Int
-  buyPrice   Float
-  paidAmount Int?
-  dueAmount  Int?
-  supplierId Int
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
-  createdBy  Int?
-  createdAt  DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  product     Product  @relation(fields: [productId], references: [id])
+  productId   Int
+  quantity    Int
+  buyPrice    Float
+  paidAmount  Int?
+  dueAmount   Int?
+  supplierId  Int
+  batchNumber String?
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  createdBy   Int?
+  createdAt   DateTime @default(now())
 }
 
 model Vendor {
@@ -1078,7 +1111,6 @@ model VendorPayment {
   createdAt  DateTime @default(now())
 }
 
-//
 model Supplier {
   id        Int          @id @default(autoincrement())
   name      String?
@@ -1275,15 +1307,80 @@ model FBPixelSetup {
   status          ActiveStatus @default(INVACTIVE)
 }
 
-model CouponCode {
-  id               Int          @id @default(autoincrement())
-  promoCode        String?
-  offerType        String?
-  amount           Int?         @default(0)
-  lastDate         String?
-  minimumBuyAmount Int?         @default(0)
-  image            String?
-  status           ActiveStatus @default(ACTIVE)
+model Coupon {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
+  description String?
+
+  discountType  DiscountType
+  discountValue Float
+
+  minOrderAmount Float?
+  maxDiscount    Float?
+
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+
+  maxUses      Int?
+  usedCount    Int  @default(0)
+  perUserLimit Int?
+
+  applicableType CouponApplyType
+  applicableId   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usages CouponUsage[]
+}
+
+model CouponUsage {
+  id       Int      @id @default(autoincrement())
+  couponId Int
+  userId   Int
+  orderId  Int?
+  usedAt   DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+}
+
+model Deal {
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String?
+
+  discountType  DiscountType
+  discountValue Float
+
+  dealType DealType
+  targetId Int?
+
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+
+  priority Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FLAT
+}
+
+enum CouponApplyType {
+  CART
+  PRODUCT
+  CATEGORY
+}
+
+enum DealType {
+  CART
+  PRODUCT
+  CATEGORY
 }
 
 model LandingPage {
@@ -1351,72 +1448,63 @@ model CourierLocation {
   updatedAt             DateTime @updatedAt
 }
 
-enum ActivityType {
-  LOGIN
-  LOGOUT
-  REGISTER
-
-  VIEW_PRODUCT
-  SEARCH
-  VIEW_CATEGORY
-
-  ADD_TO_CART
-  REMOVE_FROM_CART
-  UPDATE_CART
-
-  APPLY_COUPON
-  REMOVE_COUPON
-
-  START_CHECKOUT
-  COMPLETE_ORDER
-  CANCEL_ORDER
-
-  ADD_WISHLIST
-  REMOVE_WISHLIST
-
-  REVIEW_PRODUCT
-
-  FAILED_PAYMENT
-  SUCCESS_PAYMENT
-
-  PASSWORD_RESET_REQUEST
-  PASSWORD_CHANGED
-
-  ACCOUNT_UPDATED
-
-  OTHER
+model CancelOrder {
+  id               Int                @id @default(autoincrement())
+  orderId          Int
+  order            Order              @relation(fields: [orderId], references: [id])
+  amount           Int
+  userId           Int
+  user             User               @relation(fields: [userId], references: [id])
+  cancelOrderItems CancelOrderItems[]
 }
 
-enum EntityType {
-  PRODUCT
-  CATEGORY
-  ORDER
-  CART
-  COUPON
-  REVIEW
-  USER
+model CancelOrderItems {
+  id               Int            @id @default(autoincrement())
+  cancelOrderId    Int
+  CancelOrder      CancelOrder    @relation(fields: [cancelOrderId], references: [id])
+  productId        Int
+  product          Product        @relation(fields: [productId], references: [id])
+  productVariantId Int
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
 }
 
-enum CartStatus {
-  ACTIVE
-  ABANDONED
-  RECOVERED
-  EXPIRED
+model Cart {
+  id Int @id @default(autoincrement())
+
+  sessionId String @unique
+
+  customerType CartUserType
+  customerId   Int?
+  customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+
+  @@index([customerId])
 }
 
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-}
+model CartItem {
+  id Int @id @default(autoincrement())
 
-enum InventoryMovementType {
-  IN // purchase, restock
-  OUT // order, damage
-  ADJUST // manual correction
-  RETURN // returned from customer
-  CANCEL // cancelled order restore
+  cartId Int
+  cart   Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  variantId Int?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  quantity Int @default(1)
+  price    Int // snapshot price at add time
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId, variantId])
 }
 
 model Shipment {
@@ -1440,6 +1528,228 @@ model CourierStatusLog {
   status        String
   rawPayload    Json
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SiteNavigation {
+  id         Int              @id @default(autoincrement())
+  position   String // header, footer, sidebar
+  label      String
+  url        String
+  slug       String
+  icon       String?
+  cssClasses String?
+  cssRaw     String?
+  textColor  String?
+  image      String?
+  parentId   Int?
+  parent     SiteNavigation?  @relation("NavigationHierarchy", fields: [parentId], references: [id])
+  childrens  SiteNavigation[] @relation("NavigationHierarchy")
+
+  type      String? // category | page | external
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Widget {
+  id              Int      @id @default(autoincrement())
+  name            String
+  slug            String
+  title           String?
+  subTitle        String?
+  imageContent    String?
+  backgroundColor String?
+  borderColor     String?
+  content         String?
+  cssClasses      String?
+  position        String?
+  jsonContent     Json?
+  image           String?
+  buttonLabel     String?
+  buttonLink      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AffilaitePublisher {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activityLog ActivityLogPublisher[]
+}
+
+model ActivityLogPublisher {
+  id          Int                @id @default(autoincrement())
+  publisherId Int
+  publisher   AffilaitePublisher @relation(fields: [publisherId], references: [id])
+  extData     Json?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model Affiliate {
+  id              Int             @id @default(autoincrement())
+  publisherId     Int             @unique
+  code            String          @unique // referral code (e.g. TARIQUE10)
+  status          AffiliateStatus @default(PENDING)
+  commissionType  CommissionType  @default(PERCENTAGE)
+  commissionValue Float // 10 = 10% or 100 = flat 100৳
+  balance         Float           @default(0)
+  totalEarned     Float           @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  publisher   User                  @relation(fields: [publisherId], references: [id])
+  links       AffiliateLink[]
+  clicks      AffiliateClick[]
+  commissions AffiliateCommission[]
+  payouts     AffiliatePayout[]
+}
+
+model AffiliateLink {
+  id          Int     @id @default(autoincrement())
+  affiliateId Int
+  slug        String  @unique // auto-generated short slug
+  targetUrl   String // product/category URL
+  campaign    String? // optional campaign name
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  affiliate Affiliate        @relation(fields: [affiliateId], references: [id])
+  clicks    AffiliateClick[]
+}
+
+model AffiliateClick {
+  id          Int     @id @default(autoincrement())
+  affiliateId Int
+  linkId      Int?
+  ipAddress   String?
+  userAgent   String?
+  referrer    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  affiliate Affiliate      @relation(fields: [affiliateId], references: [id])
+  link      AffiliateLink? @relation(fields: [linkId], references: [id])
+}
+
+model AffiliateCommission {
+  id          Int              @id @default(autoincrement())
+  affiliateId Int
+  orderId     Int              @unique
+  orderAmount Float
+  commission  Float
+  status      CommissionStatus @default(PENDING)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  approvedAt DateTime?
+  paidAt     DateTime?
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+  order     Order     @relation(fields: [orderId], references: [id])
+}
+
+model AffiliatePayout {
+  id          Int          @id @default(autoincrement())
+  affiliateId Int
+  amount      Float
+  method      String
+  status      PayoutStatus @default(PENDING)
+  reference   String?
+
+  requestedAt DateTime  @default(now())
+  processedAt DateTime?
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FacebookEvent {
+  id        Int      @id @default(autoincrement())
+  eventName String
+  eventId   String   @unique
+  orderId   Int?
+  createdAt DateTime @default(now())
+}
+
+model AppSetting {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  appType     String?
+  appName     String?
+  scope       String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model JsonTable {
+  id           Int      @id @default(autoincrement())
+  name         String
+  scope        String
+  rowdata      String?
+  jsonfieldOne Json?
+  JsonfieldTwo Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Language {
+  id        Int     @id @default(autoincrement())
+  name      String
+  is_active Boolean @default(true)
+}
+
+enum AffiliateStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum CommissionType {
+  PERCENTAGE
+  FIXED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum PayoutMethod {
+  BKASH
+  NAGAD
+  BANK
+  PAYPAL
+  SSL
+  STRIPE
+  CARD
+  CASH
+  CRYPTO
+  WIRE
+  WESTERNUNION
+  OTHER
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  OTHER
 }
 
 enum ImageType {
@@ -1489,4 +1799,78 @@ enum AccountType {
   EXPENSE
   INCOME
   EQUITY
+}
+
+enum CartUserType {
+  GUEST
+  USER
+}
+
+enum ActivityType {
+  LOGIN
+  LOGOUT
+  REGISTER
+
+  VIEW_PRODUCT
+  SEARCH
+  VIEW_CATEGORY
+
+  ADD_TO_CART
+  REMOVE_FROM_CART
+  UPDATE_CART
+
+  APPLY_COUPON
+  REMOVE_COUPON
+
+  START_CHECKOUT
+  COMPLETE_ORDER
+  CANCEL_ORDER
+
+  ADD_WISHLIST
+  REMOVE_WISHLIST
+
+  REVIEW_PRODUCT
+
+  FAILED_PAYMENT
+  SUCCESS_PAYMENT
+
+  PASSWORD_RESET_REQUEST
+  PASSWORD_CHANGED
+
+  ACCOUNT_UPDATED
+
+  OTHER
+}
+
+enum EntityType {
+  PRODUCT
+  CATEGORY
+  ORDER
+  CART
+  COUPON
+  REVIEW
+  USER
+  OTHER
+}
+
+enum CartStatus {
+  ACTIVE
+  ABANDONED
+  RECOVERED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum InventoryMovementType {
+  IN // purchase, restock
+  OUT // order, damage
+  ADJUST // manual correction
+  RETURN // returned from customer
+  CANCEL // cancelled order restore
 }

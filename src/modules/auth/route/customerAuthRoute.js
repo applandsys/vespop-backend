@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const customerController = require('../../ecommerce/controller/customerController');
+const customerController = require('../../customer/controller/customerController');
 
 // api/customer/auth/login ... ? [GET]
 

@@ -1,0 +1,89 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+const addCustomerWishListCreate = async ( customerId, productId) => {
+    try {
+
+        const product = await prisma.product.findUnique({
+            where: {
+                id: parseInt(productId),
+            },
+        });
+
+        if (!product) {
+            throw new Error(`Product with ID ${productId} not found`);
+        }
+
+        const customer = await prisma.customer.findUnique({
+            where: {
+                id: parseInt(customerId),
+            },
+        });
+
+        if (!customer) {
+            throw new Error(`Customer with ID ${customerId} not found`);
+        }
+
+        return await prisma.customerWishList.create({
+            data: {
+                productId: parseInt(productId),
+                customerId: parseInt(customerId),
+            },
+        });
+    } catch (e) {
+        console.error(e);  // Log the error for debugging
+        throw e;  // Re-throw the error to be handled by calling code
+    } finally {
+        await prisma.$disconnect(); // Ensure Prisma client is properly disconnected after the operation
+    }
+};
+
+const removeWishlist = async (id, customerId) => {
+    try {
+        const wishlist = await prisma.customerWishList.findFirst({
+            where: {
+                id: Number(id),
+                customerId: Number(customerId),
+            },
+        });
+
+        if (!wishlist) {
+            throw new Error("Wishlist item not found or not owned by customer");
+        }
+
+        return await prisma.customerWishList.delete({
+            where: {
+                id: Number(id),
+            },
+        });
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
+};
+
+const getWishListByCustomerId = async (customerId) => {
+    try {
+       return prisma.customerWishList.findMany({
+            where: {
+                customerId: parseInt(customerId),
+            },
+           include:{
+                product: {
+                    include: {images: true}
+                }
+           }
+        });
+    } catch (e) {
+        console.error(e);  // Log the error for debugging
+        throw e;  // Re-throw the error to be handled by calling code
+    } finally {
+        await prisma.$disconnect(); // Ensure Prisma client is properly disconnected after the operation
+    }
+};
+
+module.exports = {
+    addCustomerWishListCreate,
+    removeWishlist,
+    getWishListByCustomerId
+};
