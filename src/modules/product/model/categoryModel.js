@@ -93,94 +93,115 @@ const getCategory = async (catId) => {
 
 const getCategoryBySlug = async (slug, searchString, maxprice) => {
     try {
-        const includeQuery = {
+        const productInclude = {
             images: true,
             labels: true,
             ratings: true,
-            productLocations: true,
             productVariants: {
                 include: {
                     variantAttributes: true,
                 },
             },
+            productLocations: true,
         };
 
-        let query = {
-            include: {
-                products: {
-                    include: includeQuery,
-                },
-            },
-        };
-
-        let data = [];
-
-        // --- define aggregate shape
-        const priceQuery = {
-            _min: { discountPrice: true },
-            _max: { discountPrice: true },
-        };
-
+        /* ---------------- CATEGORY BRANCH ---------------- */
         if (slug !== "all") {
-            // ✅ keep your category query as-is
-            query.where = { slug };
-            data = await prisma.productCategory.findFirst(query);
-
-            // ✅ separate aggregate for this category
-            const dataPrice = await prisma.product.aggregate({
-                ...priceQuery,
-                where: {
-                    categories: { some: { slug } },
-                    ...(maxprice ? { discountPrice: { lt: maxprice } } : {}),
+            const productWhere = {
+                categories: {
+                    some: { slug },
                 },
-            });
-
-            data = {
-                ...data,
-                minimumPrice: dataPrice._min.discountPrice,
-                maximumPrice: dataPrice._max.discountPrice,
+                ...(searchString
+                    ? {
+                        name: {
+                            contains: searchString,
+                            mode: "insensitive",
+                        },
+                    }
+                    : {}),
+                ...(maxprice
+                    ? {
+                        discountPrice: {
+                            lte: maxprice,
+                        },
+                    }
+                    : {}),
             };
-        } else {
-            // ✅ "all" products branch
-            const dataPrice = await prisma.product.aggregate({
-                ...priceQuery,
-                where: maxprice ? { discountPrice: { lt: maxprice } } : {},
-            });
 
-            let productQuery = {
-                include: includeQuery,
+            const [category, products, priceAgg] = await Promise.all([
+                prisma.productCategory.findFirst({
+                    where: { slug },
+                }),
+
+                prisma.product.findMany({
+                    where: productWhere,
+                    include: productInclude,
+                }),
+
+                prisma.product.aggregate({
+                    _min: { discountPrice: true },
+                    _max: { discountPrice: true },
+                    where: productWhere,
+                }),
+            ]);
+
+            return {
+                message: "Category details fetched successfully",
+                slug,
+                category: {
+                    ...category,
+                    products,
+                    minimumPrice: priceAgg._min.discountPrice ?? 0,
+                    maximumPrice: priceAgg._max.discountPrice ?? 0,
+                },
             };
+        }
 
-            if (searchString && searchString !== "null" && searchString !== "") {
-                productQuery.where = {
+        /* ---------------- ALL PRODUCTS BRANCH ---------------- */
+        const productWhere = {
+            ...(searchString
+                ? {
                     name: {
                         contains: searchString,
                         mode: "insensitive",
                     },
-                };
-            }
+                }
+                : {}),
+            ...(maxprice
+                ? {
+                    discountPrice: {
+                        lte: maxprice,
+                    },
+                }
+                : {}),
+        };
 
-            if (maxprice) {
-                productQuery.where = {
-                    ...productQuery.where,
-                    discountPrice: { lt: maxprice },
-                };
-            }
+        const [products, priceAgg] = await Promise.all([
+            prisma.product.findMany({
+                where: productWhere,
+                include: productInclude,
+            }),
 
-            const products = await prisma.product.findMany(productQuery);
+            prisma.product.aggregate({
+                _min: { discountPrice: true },
+                _max: { discountPrice: true },
+                where: productWhere,
+            }),
+        ]);
 
-            data = {
-                category: "All",
+        return {
+            message: "All products fetched successfully",
+            slug: "all",
+            category: {
+                name: "All",
                 products,
-                minimumPrice: dataPrice._min.discountPrice,
-                maximumPrice: dataPrice._max.discountPrice,
-            };
-        }
-
-        return data;
+                minimumPrice: priceAgg._min.discountPrice ?? 0,
+                maximumPrice: priceAgg._max.discountPrice ?? 0,
+            },
+        };
     } catch (error) {
         console.error("Error in getCategoryBySlug:", error);
-        return error;
+        throw error;
     }
 };
 

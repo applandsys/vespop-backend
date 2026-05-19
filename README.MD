@@ -191,7 +191,8 @@ sudo nginx -t
    
 3. v1/product  (\src\modules\ecommerce\route\productRoute.js)
     /all
-    /categories
+    /categories (http://localhost:4001/v1/product/categories)
+    /label/:label-slug (http://localhost:4001/v1/product/label/hot-products or http://localhost:4001/v1/product/label/trending-now?page=1&limit=12)
     /brands
     /featured
     /new

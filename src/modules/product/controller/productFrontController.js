@@ -17,7 +17,6 @@ const productCategories =  async (req,res) => {
 
 const featuredProducts =  async (req,res) => {
     try {
-
         const products = await prisma.product.findMany({
             where: {
                 isFeatured: true
@@ -30,9 +29,21 @@ const featuredProducts =  async (req,res) => {
                         label: true
                     },
                 },
+                productVariants: {
+                    include: {
+                        variantAttributes: {
+                            include: {
+                                attributeValue: {
+                                    include: {
+                                        attribute: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
         });
-
         res.json({ success: true, data: products });
     } catch (error) {
         console.error(error);
@@ -58,6 +69,15 @@ const productByCatId = async (req, res) => {
                         label: true, // Include label details if needed
                     },
                 },
+                variantAttributes: {
+                    include: {
+                        attributeValue: {
+                            include: {
+                                attribute: true,
+                            },
+                        },
+                    },
+                }
             },
         });
 
@@ -68,22 +88,114 @@ const productByCatId = async (req, res) => {
     }
 };
 
-const productBySlug =  async (req,res) => {
+const productBySlug = async (req, res) => {
     try {
-        const slug =  req.params.slug;
+        const { slug } = req.params;
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 12;
+        const skip = (page - 1) * limit;
+
+        const [products, total] = await Promise.all([
+            prisma.product.findMany({
+                where: {
+                    labels: {
+                        some: {
+                            label: {
+                                slug: slug,
+                            },
+                        },
+                    },
+                },
+                skip,       // 👈 OFFSET
+                take: limit,// 👈 LIMIT
+                orderBy: {
+                    createdAt: "desc",
+                },
+                include: {
+                    images: true,
+                    categories: true,
+                    labels: {
+                        include: {
+                            label: true,
+                        },
+                    },
+                    productVariants: {
+                        include: {
+                            variantAttributes: {
+                                include: {
+                                    attributeValue: {
+                                        include: {
+                                            attribute: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+            prisma.product.count({
+                where: {
+                    labels: {
+                        some: {
+                            label: {
+                                slug: slug,
+                            },
+                        },
+                    },
+                },
+            }),
+        ]);
+
+        res.json({
+            success: true,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+            data: products,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+const productByLabel = async (req, res) => {
+    try {
+        const { label } = req.params; // label slug
 
         const products = await prisma.product.findMany({
             where: {
                 labels: {
-                    some: {}  // means at least one related label exists
-                }
+                    some: {
+                        label: {
+                            slug: label, // 👈 filter by Label.slug
+                        },
+                    },
+                },
             },
             include: {
                 images: true,
                 categories: true,
                 labels: {
                     include: {
-                        label: true
+                        label: true,
+                    },
+                },
+                productVariants: {
+                    include: {
+                        variantAttributes: {
+                            include: {
+                                attributeValue: {
+                                    include: {
+                                        attribute: true,
+                                    },
+                                },
+                            },
+                        },
                     },
                 },
             },
@@ -92,9 +204,9 @@ const productBySlug =  async (req,res) => {
         res.json({ success: true, data: products });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: "Server error" });
     }
-}
+};
 
 const productDetail = async (req,res) => {
 
@@ -170,11 +282,24 @@ const newProducts = async (req, res) => {
             include: {
                 images: true,
                 categories: true,
+                productVariants: {
+                    include: {
+                        variantAttributes: {
+                            include: {
+                                attributeValue: {
+                                    include: {
+                                        attribute: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
             orderBy: {
-                createdAt: 'desc', // Sorting by creation date in descending order
+                createdAt: "desc"
             },
-            take: 10, // Limiting the result to 10 items
+            take: 10
         });
 
         res.json({ success: true, data: products });
@@ -225,6 +350,15 @@ const labelWiseProducts = async (req, res) => {
                 categories: true,
                 productVariants: true,
                 ratings: true,
+                variantAttributes: {
+                    include: {
+                        attributeValue: {
+                            include: {
+                                attribute: true,
+                            },
+                        },
+                    },
+                }
             },
             orderBy: {
                 createdAt: "desc",
@@ -279,6 +413,7 @@ module.exports = {
     productDetailBySlug,
     productByCatId,
     labelWiseProducts,
-    productExistByName
+    productExistByName,
+    productByLabel
 };
 

@@ -46,15 +46,16 @@ function getLocationId(req) {
 const categoryProductDetail = async (req, res) => {
     try {
         const { slug } = req.params;
-        const {search} = req.query;
+        const { search, maxprice } = req.query;
 
-        const category = await getCategoryBySlug(slug,search);
-
-        res.json({
-            message: "Category details fetched successfully",
+        const data = await getCategoryBySlug(
             slug,
-            category,
-        });
+            search || null,
+            maxprice ? Number(maxprice) : undefined
+        );
+
+        // ⚠️ DO NOT wrap again
+        res.json(data);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Server error" });
