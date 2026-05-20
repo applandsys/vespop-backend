@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 
 const {supplierList, supplierById, createSupplier, updateSupplierById, deleteModel, createSupplierPayment,
-    supplierCurrentBalance, supplierDueModel
+    supplierCurrentBalance, supplierDueModel, supplierPaidModel
 } = require("@/modules/supplier/model/SupplierModel");
 
 const getSupplier = async (req,res) =>{
@@ -203,7 +203,7 @@ const supplierPaymentDue = async (req, res) => {
 }
 
 const supplierPaymentPaid = async (req, res) => {
-    const data = await supplierDueModel();
+    const data = await supplierPaidModel();
     res.json(data);
 }
 

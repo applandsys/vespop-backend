@@ -1,0 +1,14 @@
+const express = require('express');
+const router = express.Router();
+const categoryController = require('@/modules/product/controller/categoryController');
+
+// v1/category/1
+router.get('/:id', categoryController.categoryDetail);
+
+// v1/category/products/category-slug
+router.get('/products/:slug', categoryController.categoryProductDetail);
+
+// v1/category/detail/slug
+router.get('/detail/:slug', categoryController.categoryDetailBySlug);
+
+module.exports = router;

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const userController = require('../../ecommerce/controller/userController');
+const userController = require('../../user/controller/userController');
 
 // api/customer/auth/login ... ? [GET]
 

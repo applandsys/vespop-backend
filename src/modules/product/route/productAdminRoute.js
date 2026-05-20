@@ -1,0 +1,92 @@
+const express = require('express');
+const router = express.Router();
+const productAdminController = require('@/modules/product/controller/productController');
+const upload = require("@/middleware/upload");
+const productUpload = require("@/middleware/productUpload");
+const brandLogo = require("@/middleware/brandLogo");
+const categoryR2Upload = require("@/middleware/categoryR2Upload");
+const brandR2LogoUpload = require("@/middleware/brandR2LogoUpload");
+const productImagesR2 = require("@/middleware/productImagesR2");
+
+// v1/admin/product
+router.get('/category/:id', productAdminController.categoryById);
+router.get('/categories', productAdminController.allCategories); // v1/admin/product/categories
+router.get('/categories/main', productAdminController.mainCategories); // v1/admin/product/categories
+router.get('/categories/sub', productAdminController.subCategories); // v1/admin/product/categories
+router.get('/categories/tree', productAdminController.categoryTree); // v1/admin/product/categories
+
+// v1/admin/product/add-product-category
+// router.post(
+//     '/add-product-category',
+//     upload.fields([
+//         { name: 'image', maxCount: 1 },
+//         { name: 'icon', maxCount: 1 }
+//     ]),
+//     productAdminController.addProductCategory
+// );
+
+router.post(
+    '/add-product-category',
+    categoryR2Upload,
+    productAdminController.addProductCategory
+);
+
+router.put(
+    '/edit-product-category/:id',  // Use :[bannerId] for category identification
+    upload.fields([
+        { name: 'image', maxCount: 1 },
+        { name: 'icon', maxCount: 1 }
+    ]),
+    productAdminController.editProductCategory
+);
+
+/*
+    router.post(
+        '/add-product',
+        productUpload.fields([
+            { name: 'image', maxCount: 5 }
+        ]),
+        productAdminController.addProduct
+    );
+ */
+
+router.post(
+    '/add-product',
+    productImagesR2,
+    productAdminController.addProduct
+);
+
+router.put(
+    '/edit-product/:id',
+    productUpload.fields([
+        { name: 'image', maxCount: 5 }
+    ]),
+    productAdminController.addProduct
+);
+
+router.post('/add-attribute', productAdminController.addProductAttribute);
+// http://localhost:4000/v1/admin/product/detail/1
+router.get('/detail/:productId', productAdminController.getProductById);
+
+// /v1/admin/product/attribute-values
+router.get('/attribute-values', productAdminController.getAllAttributes);
+router.get('/product-labels', productAdminController.getAllProductLabels);
+/*
+router.post(
+    '/add-product-brand',
+    brandLogo.fields([
+        { name: 'image', maxCount: 1 }
+    ]),
+    productAdminController.addProductBrand
+);
+
+ */
+
+
+router.post(
+    '/add-product-brand',
+    brandR2LogoUpload,
+    productAdminController.addProductBrand
+);
+
+module.exports = router;

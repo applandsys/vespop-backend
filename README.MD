@@ -169,3 +169,54 @@ server {
 }
 
 sudo nginx -t
+
+```
+
+### DATABASE LIST
+```
+1. Customer (Customers)
+
+```
+
+### ALL API LIST
+```
+1. v1/customer/auth/
+      /login
+      /signup
+      
+
+2. v1/user/auth 
+      /login
+      /signup
+   
+3. v1/product  (\src\modules\ecommerce\route\productRoute.js)
+    /all
+    /categories (http://localhost:4001/v1/product/categories)
+    /label/:label-slug (http://localhost:4001/v1/product/label/hot-products or http://localhost:4001/v1/product/label/trending-now?page=1&limit=12)
+    /brands
+    /featured
+    /new
+    /list/:slug
+    /detail/:slug
+    /exist/:name
+    /list/:catid
+    /attribute/all
+    /label/:labelSlug
+    /reviews/:productId   
+    
+4. v1/category (\src\modules\ecommerce\route\categoryRoute.js)
+    /:id
+    /products/:slug
+    /detail/:slug
+    
+5. v1/vendor (\src\modules\ecommerce\route\categoryRoute.js)
+    /vendor-list
+        
+6. v1/supplier (\src\modules\supplier\route\supplierRoute.js)
+      / (GET & POST DELETE)
+      /:id (GET)
+      /:id (PUT)
+      /payment
+      /payment/due
+      /payment/paid
+```
